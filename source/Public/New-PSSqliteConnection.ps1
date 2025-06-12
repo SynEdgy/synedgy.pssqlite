@@ -13,6 +13,7 @@ function New-PSSqliteConnection
     try
     {
         $connection = [SqliteConnection]::new($ConnectionString)
+
         return $connection
     }
     catch

@@ -1,14 +1,19 @@
 $query = 'CREATE TABLE "characters" (
     "id"    INTEGER,
     "name"    TEXT UNIQUE,
-    "guild"    INTEGER
+    "guild"    INTEGER,
+    "TestNull"    TEXT NULL
 );'
 
 $c = New-PSSqliteConnection
 
-# Invoke-PSSqliteQuery -SqliteConnection $c -Query "SELECT * FROM characters;" -keepAlive
-Invoke-PSSqliteQuery -SqliteConnection $c -Query $query -keepAlive
-Invoke-PSSqliteQuery -SqliteConnection $c -Query "SELECT * FROM characters;" -keepAlive
-Invoke-PSSqliteQuery -SqliteConnection $c -Query "INSERT INTO characters (id, name, guild) VALUES (1, 'John', 1);" -keepAlive
-Invoke-PSSqliteQuery -SqliteConnection $c -Query "SELECT * FROM characters;" -keepAlive
-Invoke-PSSqliteQuery -SqliteConnection $c -Query "DELETE FROM characters WHERE id = 1;" -keepAlive
+# Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters;" -keepAlive
+Invoke-PSSqliteQuery -SqliteConnection $c -CommandText $query -keepAlive
+Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters;" -keepAlive
+Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "INSERT INTO characters (id, name, guild) VALUES (1, 'John', 1);" -keepAlive
+Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters;" -keepAlive
+Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters;" -keepAlive -As PSCustomObject
+Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters;" -keepAlive -As OrderedDictionary
+
+
+# Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "DELETE FROM characters WHERE id = 1;" -keepAlive

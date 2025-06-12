@@ -1,4 +1,5 @@
 using namespace Microsoft.Data.Sqlite
+using namespace System.Collections.Specialized
 
 function Invoke-PSSqliteQuery
 {
@@ -10,8 +11,19 @@ function Invoke-PSSqliteQuery
         $SqliteConnection,
 
         [Parameter(Mandatory = $true)]
+        [Alias('Query')]
         [string]
-        $Query,
+        $CommandText,
+
+        [Parameter()]
+        [ValidateSet('DataTable', 'DataReader', 'DataSet','OrderedDictionary','PSCustomObject')]
+        [string]
+        # Specifies the type of output to return. Default is 'DataTable'.
+        $As = 'DataTable',
+
+        [Parameter()]
+        [Type]
+        $CastAs,
 
         [Parameter()]
         [System.Collections.IDictionary]
@@ -19,12 +31,16 @@ function Invoke-PSSqliteQuery
         $Parameters = @{},
 
         [Parameter()]
+        [int]
+        # Command timeout in seconds
+        $CommandTimeout = 30,
+
+        [Parameter()]
         [switch]
         $keepAlive
     )
 
-    # Create a new SQLite connection
-    begin
+    process
     {
         if ($SqliteConnection.State -ne 'Open')
         {
@@ -38,15 +54,13 @@ function Invoke-PSSqliteQuery
                 return
             }
         }
-    }
 
-    process
-    {
         try
         {
             # Create a command to execute the query
             $command = $SqliteConnection.CreateCommand()
-            $command.CommandText = $Query
+            $command.CommandText = $CommandText
+            $command.CommandTimeout = $CommandTimeout
 
             if ($PSBoundParameters.ContainsKey('Parameters') -and $Parameters.Count -gt 0)
             {
@@ -67,8 +81,6 @@ function Invoke-PSSqliteQuery
             $dataTable.Load($dataReader)
             $dataReader.Dispose()
             $null = $dataReader.Close()
-
-            return $dataTable
         }
         catch
         {
@@ -78,19 +90,109 @@ function Invoke-PSSqliteQuery
         finally
         {
             # Ensure the connection is closed
-            if ($connection.State -eq 'Open')
+            if ($SqliteConnection.State -eq 'Open' -and -not $keepAlive.IsPresent)
             {
-                $connection.Close()
+                $SqliteConnection.Close()
             }
         }
-    }
 
-    end
-    {
-        if (-not $keepAlive.IsPresent)
+        # Processing output
+        $transformedResult = switch ($As)
         {
-            # Close the connection if it is not needed anymore
-            $SqliteConnection.Close()
+            'DataTable'
+            {
+                $dataTable
+            }
+
+            'DataReader'
+            {
+                # Return the data reader directly
+                $dataReader
+            }
+
+            'OrderedDictionary'
+            {
+                # Convert DataTable to OrderedDictionary
+                foreach ($row in $dataTable.Rows)
+                {
+                    $rowDict = [System.Collections.Specialized.OrderedDictionary]::new()
+                    foreach ($col in $dataTable.Columns)
+                    {
+                        $rowDict[$col.ColumnName] = $null
+                        if ($row[$col] -isnot [System.DBNull])
+                        {
+                            $rowDict[$col.ColumnName] = $row[$col.ColumnName]
+                        }
+                    }
+
+                    $rowDict
+                }
+            }
+
+            'PSCustomObject'
+            {
+                # Convert DataTable to OrderedDictionary
+                foreach ($row in $dataTable.Rows)
+                {
+                    $rowObj = [PSCustomObject]@{}
+
+                    foreach ($col in $dataTable.Columns)
+                    {
+                        if ($row[$col] -isnot [System.DBNull])
+                        {
+                            $rowObj.psobject.Properties.Add([psnoteproperty]::new($col.ColumnName, $row[$col]))
+                        }
+                        else
+                        {
+                            $rowObj.psobject.Properties.Add([psnoteproperty]::new($col.ColumnName, $null))
+                        }
+                    }
+
+                    # Add PSTypeName to the object, based on DatabaseName.TableName
+                    if ($c.Database)
+                    {
+                        $rowObj.Psobject.TypeNames.Insert(0,('{0}' -f $dataTable.TableName))
+                        $rowObj.Psobject.TypeNames.Insert(0,('{0}.{1}' -f $c.database, $dataTable.TableName))
+                    }
+                    elseif ($dataTable.TableName)
+                    {
+                        $rowObj.Psobject.TypeNames.Insert(0,$dataTable.TableName)
+                    }
+
+                    $rowObj
+                }
+            }
+
+            'DataSet'
+            {
+                # Create a DataSet and add the DataTable to it
+                $dataSet = [System.Data.DataSet]::new()
+                $dataSet.Tables.Add($dataTable)
+                $dataSet
+            }
+
+            default
+            {
+                Write-Warning -Message "Unsupported output type: $As. Returning DataTable instead."
+                $dataTable
+            }
+        }
+
+        if (-not $PSBoundParameters.ContainsKey('CastAs'))
+        {
+            $transformedResult
+        }
+        elseif ($PSBoundParameters.ContainsKey('CastAs') -and $CastAs -ne $null)
+        {
+            # Cast the result to the specified type if provided
+            try
+            {
+                $transformedResult -as $CastAs
+            }
+            catch
+            {
+                Write-Error -Message "Failed to cast result to type $CastAs : $_"
+            }
         }
     }
 }
