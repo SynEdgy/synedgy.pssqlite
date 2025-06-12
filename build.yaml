@@ -9,6 +9,8 @@
 BuiltModuleSubdirectory: module
 CopyPaths:
   - en-US
+  - lib
+  - ScriptsToProcess
 #  - DSCResources
   # - Modules
 Encoding: UTF8
@@ -34,7 +36,7 @@ NestedModule:
 #    OutputDirectory: ///Modules/HelperSubmodule
 #    VersionedOutputDirectory: false
 #    AddToManifest: false
-#    SemVer: 
+#    SemVer:
 #    # suffix:
 #    # prefix:
 
@@ -153,9 +155,3 @@ TaskHeader: |
   Write-Build DarkGray "  $Path"
   Write-Build DarkGray "  $($Task.InvocationInfo.ScriptName):$($Task.InvocationInfo.ScriptLineNumber)"
   ""
-
-
-
-
-
-
