@@ -3,11 +3,11 @@ using namespace System.Collections
 
 class SqliteIndexConstraint : SqliteConstraint
 {
+    [string]$Name # Name of the index
+    [string]$Table # Name of the table on which the index is created
     [bool] $Unique = $false # Indicates if the index is unique
     [bool] $ifNotExists = $true # Indicates if the index is created with IF NOT EXISTS
     [string]$SchemaName # Schema name for the index (optional, default is null)
-    [string]$IndexName # Name of the index
-    [string]$TableName
     [string[]]$Columns
     [string]$Where # Optional WHERE clause for partial indexes
 
@@ -18,9 +18,13 @@ class SqliteIndexConstraint : SqliteConstraint
 
     SqliteIndexConstraint([IDictionary]$Definition)
     {
+        $this.Name = $Definition['Name']
+
         if (-not [string]::IsNullOrEmpty($Definition.Unique))
         {
-            $null = [bool]::TryParse($Definition['Unique'], [ref]$this.Unique)
+            [bool]$refValue = $this.Unique
+            $null = [bool]::TryParse($Definition['Unique'], [ref]$refValue)
+            $this.Unique = $refValue
         }
 
         if (-not [string]::IsNullOrEmpty($Definition.ifNotExists))
@@ -29,8 +33,7 @@ class SqliteIndexConstraint : SqliteConstraint
         }
 
         $this.SchemaName = $Definition['SchemaName']
-        $this.IndexName = $Definition['IndexName']
-        $this.TableName = $Definition['TableName']
+        $this.Table = $Definition['Table']
         $this.Columns = ($Definition['Columns'] -as [string[]]).Where({ $_ -ne $null }) # Ensure Columns is an array of strings
         if ($Definition.keys -contains 'Where')
         {
@@ -42,14 +45,14 @@ class SqliteIndexConstraint : SqliteConstraint
 
     [void] ValidateDefinition()
     {
-        if (-not $this.IndexName)
+        if (-not $this.Name)
         {
-            throw [System.ArgumentException]::new('IndexName is required.')
+            throw [System.ArgumentException]::new('Name is required for an index.')
         }
 
-        if (-not $this.TableName)
+        if (-not $this.Table)
         {
-            throw [System.ArgumentException]::new('TableName is required.')
+            throw [System.ArgumentException]::new('The Table''s name is required.')
         }
 
         if (-not $this.Columns -or $this.Columns.Count -eq 0)

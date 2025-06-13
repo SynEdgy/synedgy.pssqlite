@@ -1,6 +1,8 @@
 output/
 
 **.bak
+**.sqlite
+**.db
 *.local.*
 !**/README.md
 .kitchen/

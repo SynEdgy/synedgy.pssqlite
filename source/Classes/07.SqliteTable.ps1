@@ -45,17 +45,17 @@ class SqliteTable
                 {
                     'ForeignKey'
                     {
-                        $this.Constraints += [SqliteForeignKeyConstraint]::new($constraint)
+                        $this.Constraints += [SqliteForeignKeyTableConstraint]::new($constraint)
                     }
 
                     'Check'
                     {
-                        $this.Constraints += [SqliteCheckConstraint]::new($constraint)
+                        $this.Constraints += [SqliteCheckTableConstraint]::new($constraint)
                     }
 
                     'PrimaryKey'
                     {
-                        $this.Constraints += [SqlitePrimaryKeyConstraint]::new($constraint)
+                        $this.Constraints += [SqlitePrimaryKeyTableConstraint]::new($constraint)
                     }
 
                     default

@@ -36,22 +36,51 @@ class SQLiteDBConfig
         else
         {
             $configFileObject = Get-Content -Path $StringInfo | ConvertFrom-Yaml -Ordered
-            if (-not [string]::IsNullOrEmpty($configFileObject.ConnectionString))
-            {
-                $this.ConnectionString = $configFileObject.ConnectionString
-                # DatabasePath and DatabaseFile are ignored in this case
-            }
-            else
-            {
-                $this.DatabasePath = $configFileObject.DatabasePath
-                $this.DatabaseFile = $configFileObject.DatabaseFile
-                $this.ConnectionString = 'Data Source={0};' -f (Join-Path -Path $this.DatabasePath -ChildPath $this.DatabaseFile)
-            }
+            $this.SetObjectProperties($configFileObject)
         }
+    }
+
+    SQLiteDBConfig ([System.Collections.IDictionary]$Definition)
+    {
+        $this.SetObjectProperties($Definition)
     }
 
     static [SQLiteDBConfig] Load([string]$StringInfo)
     {
         return [SQLiteDBConfig]::new($StringInfo)
+    }
+
+    hidden SetObjectProperties([System.Collections.IDictionary]$Definition)
+    {
+        if ($Definition.Keys -contains 'DatabasePath')
+        {
+            $this.DatabasePath = $Definition['DatabasePath']
+        }
+
+        if ($Definition.Keys -contains 'DatabaseFile')
+        {
+            $this.DatabaseFile = $Definition['DatabaseFile']
+        }
+
+        if ($Definition.Keys -contains 'ConnectionString')
+        {
+            $this.ConnectionString = $Definition['ConnectionString']
+        }
+        else
+        {
+            if ($this.DatabaseFile)
+            {
+                $this.ConnectionString = 'Data Source={0};' -f (Join-Path -Path $this.DatabasePath -ChildPath $this.DatabaseFile)
+            }
+            else
+            {
+                throw [System.ArgumentException]::new('DatabasePath and DatabaseFile must be set to construct a valid connection string.')
+            }
+        }
+
+        if ($Definition.Keys -contains 'Schema')
+        {
+            $this.Schema = [SqliteDBSchema]::new($Definition['Schema'])
+        }
     }
 }

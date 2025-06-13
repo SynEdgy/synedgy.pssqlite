@@ -3,10 +3,18 @@ DatabaseFile: myDB.sqlite
 # types: INTEGER, REAL, TEXT, and BLOB.
 Schema:
   Tables:
-    tableName1:
+    Table1:
       constraints:
-        - UNIQUE (column2, column3)
-        - FOREIGN KEY (column2) REFERENCES tableName2(column1)
+        - Type: UNIQUE
+          columns: ['column2', 'column3']
+        - NAME: table2_column2_fk
+          Type: FOREIGNKEY
+          Table: Table1 #TODO: pick the table name from the column
+          columns: ['column2']
+          ForeignTable: Table2
+          ForeignColumns: ['column1']
+        # UNIQUE (column2, column3)
+        # - FOREIGN KEY (column2) REFERENCES Table2(column1)
       columns:
         id:
           type: INTEGER
@@ -22,18 +30,33 @@ Schema:
 
         column4:
           type: BLOB
-    tableName2:
-    constraints: []
-    columns:
-      id:
-        type: INTEGER
-        PrimaryKey: true
-        indexed: true
+    Table2:
+      constraints: []
+      columns:
+        id:
+          type: INTEGER
+          PrimaryKey: true
+          indexed: true
 
-      col1:
-        type: TEXT
-        AllowNull: false # Creates a NOT NULL constraint on this column
-        ForeignKey: 'tableName1(column2)'
+        col1:
+          type: TEXT
+          AllowNull: false # Creates a NOT NULL constraint on this column
+          ForeignKey: 'Table1(column2)'
 
-      col2:
-        type: REAL
+        col2:
+          type: REAL
+  Indexes:
+    index1:
+      name: index_name1
+      table: Table1
+      columns: ['column2', 'column3']
+      unique: true
+      ifNotExists: true
+      # schema: main.
+      # WHERE: column2 IS NOT NULL
+
+
+    index2:
+      table: Table2
+      columns: ['col1']
+      unique: false
