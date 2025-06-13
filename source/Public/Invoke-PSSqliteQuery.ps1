@@ -74,8 +74,7 @@ function Invoke-PSSqliteQuery
                 }
             }
 
-            # Execute the query and fill a DataTable with the results
-            # $dataAdapter = New-Object System.Data.SQLite.SQLiteDataAdapter($command)
+            # Execute the query and load a DataTable with the results
             $dataReader = $command.ExecuteReader()
             $dataTable = [System.Data.DataTable]::new()
             $dataTable.Load($dataReader)
@@ -84,7 +83,6 @@ function Invoke-PSSqliteQuery
         }
         catch
         {
-            # TODO: think about closing the connection here if an error occurs
             Write-Error -Message "An error occurred while executing the query: $_"
         }
         finally
@@ -140,23 +138,23 @@ function Invoke-PSSqliteQuery
                     {
                         if ($row[$col] -isnot [System.DBNull])
                         {
-                            $rowObj.psobject.Properties.Add([psnoteproperty]::new($col.ColumnName, $row[$col]))
+                            $rowObj.PSObject.Properties.Add([PSNoteProperty]::new($col.ColumnName, $row[$col]))
                         }
                         else
                         {
-                            $rowObj.psobject.Properties.Add([psnoteproperty]::new($col.ColumnName, $null))
+                            $rowObj.PSObject.Properties.Add([PSNoteProperty]::new($col.ColumnName, $null))
                         }
                     }
 
                     # Add PSTypeName to the object, based on DatabaseName.TableName
                     if ($c.Database)
                     {
-                        $rowObj.Psobject.TypeNames.Insert(0,('{0}' -f $dataTable.TableName))
-                        $rowObj.Psobject.TypeNames.Insert(0,('{0}.{1}' -f $c.database, $dataTable.TableName))
+                        $rowObj.PSObject.TypeNames.Insert(0,('{0}' -f $dataTable.TableName))
+                        $rowObj.PSObject.TypeNames.Insert(0,('{0}.{1}' -f $c.database, $dataTable.TableName))
                     }
                     elseif ($dataTable.TableName)
                     {
-                        $rowObj.Psobject.TypeNames.Insert(0,$dataTable.TableName)
+                        $rowObj.PSObject.TypeNames.Insert(0,$dataTable.TableName)
                     }
 
                     $rowObj

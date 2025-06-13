@@ -1,0 +1,39 @@
+DatabasePath: .
+DatabaseFile: myDB.sqlite
+# types: INTEGER, REAL, TEXT, and BLOB.
+Schema:
+  Tables:
+    tableName1:
+      constraints:
+        - UNIQUE (column2, column3)
+        - FOREIGN KEY (column2) REFERENCES tableName2(column1)
+      columns:
+        id:
+          type: INTEGER
+          PrimaryKey: true
+          indexed: true
+
+        column2:
+          type: TEXT
+          AllowNull: false # Creates a NOT NULL constraint on this column
+
+        column3:
+          type: REAL
+
+        column4:
+          type: BLOB
+    tableName2:
+    constraints: []
+    columns:
+      id:
+        type: INTEGER
+        PrimaryKey: true
+        indexed: true
+
+      col1:
+        type: TEXT
+        AllowNull: false # Creates a NOT NULL constraint on this column
+        ForeignKey: 'tableName1(column2)'
+
+      col2:
+        type: REAL

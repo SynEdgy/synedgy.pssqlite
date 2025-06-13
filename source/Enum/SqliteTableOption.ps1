@@ -1,0 +1,5 @@
+enum SqliteTableOption
+{
+    WithoutRowId
+    Strict
+}
