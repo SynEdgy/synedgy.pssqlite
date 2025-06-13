@@ -2,6 +2,7 @@ class SqliteTable
 {
     [string]$Name
     [string]$Schema
+    [bool] $ifNotExists = $true # If true, the table will only be created if it does not already exist
     [SqliteColumn[]]$Columns
     [SQLiteConstraint[]]$Constraints = @() # List of constraints for the table
     [SQLiteTableOption[]]$Options = @() # Options for the table, such as WithoutRowId or Strict
@@ -26,9 +27,7 @@ class SqliteTable
             {
                 $currentColumn = $Definition['Columns'][$columnName]
                 $currentColumn['Name'] = $columnName
-                $column = [SqliteColumn]::new($currentColumn)
-                $this.Columns += $column
-                # $this.Columns += [SqliteColumn]::new($column)
+                $this.Columns += [SqliteColumn]::new($currentColumn)
             }
         }
 
@@ -39,10 +38,32 @@ class SqliteTable
 
         if ($Definition.keys -contains 'Constraints')
         {
-            # foreach ($constraint in $Definition['Constraints'])
-            # {
-            #     $this.Constraints += [SQLiteConstraint]::new($constraint)
-            # }
+
+            foreach ($constraint in $Definition['Constraints'])
+            {
+                switch ($constraint['Type'])
+                {
+                    'ForeignKey'
+                    {
+                        $this.Constraints += [SqliteForeignKeyConstraint]::new($constraint)
+                    }
+
+                    'Check'
+                    {
+                        $this.Constraints += [SqliteCheckConstraint]::new($constraint)
+                    }
+
+                    'PrimaryKey'
+                    {
+                        $this.Constraints += [SqlitePrimaryKeyConstraint]::new($constraint)
+                    }
+
+                    default
+                    {
+                        Write-Warning -Message ('Unknown constraint type {0} for table {1}. Skipping.' -f $constraint['Type'], $this.Name)
+                    }
+                }
+            }
         }
 
         if ($Definition.keys -contains 'Options')
