@@ -77,8 +77,8 @@ function Invoke-PSSqliteQuery
             # Execute the query and load a DataTable with the results
             $dataReader = $command.ExecuteReader()
             $dataTable = [System.Data.DataTable]::new()
-            $dataTable.Load($dataReader)
-            $dataReader.Dispose()
+            $null = $dataTable.Load($dataReader)
+            $null = $dataReader.Dispose()
             $null = $dataReader.Close()
         }
         catch
@@ -90,7 +90,9 @@ function Invoke-PSSqliteQuery
             # Ensure the connection is closed
             if ($SqliteConnection.State -eq 'Open' -and -not $keepAlive.IsPresent)
             {
-                $SqliteConnection.Close()
+                Write-Debug -Message "Closing SQLite connection & clearing pool."
+                $null = $SqliteConnection.Close()
+                [Microsoft.Data.Sqlite.SqliteConnection]::ClearPool($SqliteConnection)
             }
         }
 
@@ -138,23 +140,23 @@ function Invoke-PSSqliteQuery
                     {
                         if ($row[$col] -isnot [System.DBNull])
                         {
-                            $rowObj.PSObject.Properties.Add([PSNoteProperty]::new($col.ColumnName, $row[$col]))
+                            $null = $rowObj.PSObject.Properties.Add([PSNoteProperty]::new($col.ColumnName, $row[$col]))
                         }
                         else
                         {
-                            $rowObj.PSObject.Properties.Add([PSNoteProperty]::new($col.ColumnName, $null))
+                            $null = $rowObj.PSObject.Properties.Add([PSNoteProperty]::new($col.ColumnName, $null))
                         }
                     }
 
                     # Add PSTypeName to the object, based on DatabaseName.TableName
                     if ($c.Database)
                     {
-                        $rowObj.PSObject.TypeNames.Insert(0,('{0}' -f $dataTable.TableName))
-                        $rowObj.PSObject.TypeNames.Insert(0,('{0}.{1}' -f $c.database, $dataTable.TableName))
+                        $null = $rowObj.PSObject.TypeNames.Insert(0,('{0}' -f $dataTable.TableName))
+                        $null = $rowObj.PSObject.TypeNames.Insert(0,('{0}.{1}' -f $c.database, $dataTable.TableName))
                     }
                     elseif ($dataTable.TableName)
                     {
-                        $rowObj.PSObject.TypeNames.Insert(0,$dataTable.TableName)
+                        $null = $rowObj.PSObject.TypeNames.Insert(0,$dataTable.TableName)
                     }
 
                     $rowObj
@@ -165,7 +167,7 @@ function Invoke-PSSqliteQuery
             {
                 # Create a DataSet and add the DataTable to it
                 $dataSet = [System.Data.DataSet]::new()
-                $dataSet.Tables.Add($dataTable)
+                $null = $dataSet.Tables.Add($dataTable)
                 $dataSet
             }
 

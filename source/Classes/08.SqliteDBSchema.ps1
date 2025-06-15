@@ -53,4 +53,21 @@ class SqliteDBSchema
         }
     }
 
+    [string] GetSchemaSDL()
+    {
+        $this.ValidateDefinition()
+        [System.Text.StringBuilder]$sb = [System.Text.StringBuilder]::new()
+
+        foreach ($table in $this.Tables)
+        {
+            $sb.AppendLine($table.CreateString())
+        }
+
+        foreach ($index in $this.Indexes)
+        {
+            $sb.AppendLine($index.CreateString())
+        }
+
+        return $sb.ToString()
+    }
 }

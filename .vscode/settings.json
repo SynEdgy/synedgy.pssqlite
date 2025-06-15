@@ -20,19 +20,20 @@
         "*.ps1xml": "xml"
     },
     "cSpell.words": [
-        "COMPANYNAME",
-        "ICONURI",
-        "LICENSEURI",
-        "PROJECTURI",
-        "RELEASENOTES",
         "buildhelpers",
+        "COMPANYNAME",
         "endregion",
         "gitversion",
         "icontains",
+        "ICONURI",
         "keepachangelog",
+        "LICENSEURI",
         "notin",
+        "PROJECTURI",
         "pscmdlet",
-        "steppable"
+        "RELEASENOTES",
+        "steppable",
+        "synedgy"
     ],
     "[markdown]": {
         "files.trimTrailingWhitespace": false,

@@ -64,7 +64,14 @@ class SqliteIndexConstraint : SqliteConstraint
     [string] CreateString()
     {
         [System.Text.StringBuilder]$sb = [System.Text.StringBuilder]::new()
-        $sb.Append('CREATE {0}INDEX ') -f (if ($this.Unique) { 'UNIQUE ' })
+        $sb.Append('CREATE')
+        if ($this.Unique)
+        {
+            $sb.Append(' UNIQUE')
+        }
+
+        $sb.Append(' INDEX ')
+
         if ($this.ifNotExists)
         {
             $sb.Append('IF NOT EXISTS ')
@@ -74,7 +81,9 @@ class SqliteIndexConstraint : SqliteConstraint
         {
             $sb.Append('{0}.' -f $this.SchemaName)
         }
-        $sb.Append('{0} ON {1} (' -f $this.IndexName, $this.TableName)
+
+        $sb.Append(('{0} ON {1}(' -f $this.Name, $this.Table))
+
         if ($this.Columns -and $this.Columns.Count -gt 0)
         {
             $sb.Append(($this.Columns -join ', '))
@@ -83,8 +92,10 @@ class SqliteIndexConstraint : SqliteConstraint
         $sb.Append(')')
         if ($this.WHERE)
         {
-            $sb.Append(' WHERE {0}' -f $this.Where)
+            $sb.Append((' WHERE {0}' -f $this.Where))
         }
+
+        $sb.AppendLine(';')
 
         return $sb.ToString()
     }

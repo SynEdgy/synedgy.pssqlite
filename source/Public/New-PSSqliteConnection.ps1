@@ -16,11 +16,7 @@ function New-PSSqliteConnection
 
         [Parameter(ParameterSetName = 'byDatabasePath', Mandatory = $true)]
         [string]
-        $DatabaseFile,
-
-        [Parameter(ParameterSetName = 'byDatabasePath')]
-        [string]
-        $Database = 'main'
+        $DatabaseFile
     )
 
     try

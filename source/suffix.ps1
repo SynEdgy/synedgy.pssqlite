@@ -10,8 +10,6 @@ $ExportableTypes = @(
     'SqliteIndexConstraint'
     'SqliteTable'
     'SqliteColumn'
-    'SqlitePrimaryKeyTableConstraint'
-    'SqliteIndexConstraint'
 )
 
 # inspired from https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_classes?view=powershell-7.5

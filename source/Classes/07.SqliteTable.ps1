@@ -41,6 +41,7 @@ class SqliteTable
 
             foreach ($constraint in $Definition['Constraints'])
             {
+                $constraint['Table'] = $this.Name # Ensure the constraint has the table name set
                 switch ($constraint['Type'])
                 {
                     'ForeignKey'
@@ -56,6 +57,11 @@ class SqliteTable
                     'PrimaryKey'
                     {
                         $this.Constraints += [SqlitePrimaryKeyTableConstraint]::new($constraint)
+                    }
+
+                    'Index'
+                    {
+                        $this.Constraints += [SqliteIndexConstraint]::new($constraint)
                     }
 
                     default
@@ -140,7 +146,7 @@ class SqliteTable
             }
         }
 
-        $null = $sb.AppendLine(')')
+        $null = $sb.Append(')')
 
         if ($this.Options.Count -gt 0)
         {
@@ -148,6 +154,7 @@ class SqliteTable
             $null = $sb.Append(($this.Options | ForEach-Object { $_.ToString() }) -join ', ')
         }
 
+        $sb.AppendLine(';')
         return $sb.ToString()
     }
 }

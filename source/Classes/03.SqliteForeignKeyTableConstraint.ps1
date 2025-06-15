@@ -100,7 +100,7 @@ class SqliteForeignKeyTableConstraint : SqliteConstraint
             $null = $sb.AppendLine((' MATCH {0}' -f $this.Match.ToUpper()))
         }
 
-        $null = $sb.AppendLine(')')
+        $null = $sb.AppendLine(');')
 
         return $sb.ToString()
     }

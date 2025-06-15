@@ -1,0 +1,1 @@
+[SQLiteDBConfig]$script:DBConfig = $null
