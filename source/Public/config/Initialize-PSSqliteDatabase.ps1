@@ -1,12 +1,42 @@
+
 function Initialize-PSSqliteDatabase
 {
-    [CmdletBinding()]
+    <#
+        .SYNOPSIS
+        Initializes a SQLite database based on the provided configuration.
+
+        .DESCRIPTION
+        This function initializes a SQLite database using the specified configuration file or object.
+        It supports different migration modes to handle existing databases.
+
+        .PARAMETER Path
+        Path to the database configuration file.
+
+        .PARAMETER DatabaseConfig
+        SQLiteDBConfig object containing the database configuration.
+
+        .PARAMETER MigrationMode
+        Migration mode for the database initialization. Options are INCREMENTAL, CREATE, or OVERWRITE.
+
+        .PARAMETER Force
+        If set, forces the initialization process, potentially overwriting existing configurations.
+
+    #>
+    [CmdletBinding(DefaultParameterSetName = 'byPath')]
+    [OutputType([void])]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'byPath')]
         # Path to the database configuration file
         [string]
-        $DatabaseConfigPath,
+        [Alias('DatabaseConfigPath')]
+        $Path,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'byConfig')]
+        # SQLiteDBConfig object containing the database configuration
+        [Alias('SqliteDBConfig')]
+        [SQLiteDBConfig]
+        $DatabaseConfig,
 
         [Parameter()]
         [DBMigrationMode]
@@ -22,16 +52,31 @@ function Initialize-PSSqliteDatabase
     )
 
     # Load the SQLiteDBConfig
-    if (-not (Test-Path -Path $DatabaseConfigPath -PathType Leaf -IsValid))
+    switch ($PSCmdlet.ParameterSetName)
     {
-        throw "The specified database configuration file does not exist: $DatabaseConfigPath"
-    }
-    else
-    {
-        $databaseConfig = Get-PSSqliteDBConfig -ConfigFile $DatabaseConfigPath
+        'byPath'
+        {
+            if (-not (Test-Path -Path $Path -PathType Leaf -IsValid))
+            {
+                throw "The specified database configuration file does not exist: $Path"
+            }
+            else
+            {
+                $DatabaseConfig = Get-PSSqliteDBConfig -ConfigFile $Path
+            }
+        }
+
+        'byConfig'
+        {
+            Write-Verbose -Message 'Using provided SQLiteDBConfig object.'
+            if (-not $DatabaseConfig -or $null -ne $DatabaseConfig.Schema.ValidateDefinition())
+            {
+                throw "Invalid SQLiteDBConfig object provided."
+            }
+        }
     }
 
-    Write-Verbose -Message ('Loaded database configuration from {0}.' -f $DatabaseConfigPath)
+    Write-Verbose -Message ('Loaded database configuration from {0}.' -f $Path)
     if ($Force.IsPresent)
     {
         Write-Verbose -Message 'Force flag is set. Overwriting the database configuration.'
@@ -43,16 +88,16 @@ function Initialize-PSSqliteDatabase
     #  Compare the version of the config file with the database version in _metadata table
     #  init the db depending of the MigrationMode and comparison direction
     [bool] $shouldUpdateDB = $false
-    if (-not $databaseConfig.databaseExists())
+    if (-not $DatabaseConfig.databaseExists())
     {
         Write-Verbose -Message 'No existing database found. Creating a new database.'
-        $databaseConfig.createDatabase()
+        $DatabaseConfig.createDatabase()
     }
-    elseif ($databaseConfig.databaseExists())
+    elseif ($DatabaseConfig.databaseExists())
     {
         Write-Verbose -Message 'Existing database found. Checking for updates.'
 
-        $compareResult = Compare-PSSqliteDBVersion -ExpectedVersion $databaseConfig.DBVersion -DatabaseConfig $databaseConfig
+        $compareResult = Compare-PSSqliteDBVersion -ExpectedVersion $DatabaseConfig.DBVersion -DatabaseConfig $DatabaseConfig
 
         if ($compareResult.direction -eq '==')
         {
@@ -95,7 +140,7 @@ function Initialize-PSSqliteDatabase
             if ($shouldUpdateDB)
             {
                 Write-Verbose -Message 'Updating the database schema to the latest version.'
-                $databaseConfig.updateDBSchema()
+                $DatabaseConfig.updateDBSchema()
             }
             else
             {
@@ -106,10 +151,10 @@ function Initialize-PSSqliteDatabase
         'CREATE'
         {
             Write-Verbose -Message 'Migration mode is set to CREATE. Creating a new database if it does not exist.'
-            if ($shouldUpdateDB -and -not $databaseConfig.databaseExists())
+            if ($shouldUpdateDB -and -not $DatabaseConfig.databaseExists())
             {
                 Write-Verbose -Message 'Creating a new database schema.'
-                $databaseConfig.createDatabase()
+                $DatabaseConfig.createDatabase()
             }
             else
             {
@@ -122,8 +167,8 @@ function Initialize-PSSqliteDatabase
             if ($Force.IsPresent -eq $true -or $shouldUpdateDB -eq $true)
             {
                 Write-Verbose -Message 'Migration mode is set to OVERWRITE. Removing existing database and creating a new one.'
-                $databaseConfig.removeDatabase()
-                $databaseConfig.createDatabase()
+                $DatabaseConfig.removeDatabase()
+                $DatabaseConfig.createDatabase()
             }
             else # if ($Force.IsPresent -eq $false -and $shouldUpdateDB -eq $false)
             {

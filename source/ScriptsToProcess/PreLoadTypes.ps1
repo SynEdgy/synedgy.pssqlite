@@ -3,12 +3,17 @@ $assembliesToLoad = @(
     # This list should be loaded in the order they are listed
     'System.Runtime.CompilerServices.Unsafe.dll' # has to be 4.0.4.1 from nuget package version 4.5.3
     'System.Memory.dll'
-    'SQLitePCLRaw.provider.dynamic_cdecl.dll' # Was needed for Windows PowerShell
     'SQLitePCLRaw.provider.e_sqlite3.dll'
     'SQLitePCLRaw.core.dll'
     'SQLitePCLRaw.batteries_v2.dll'
     'Microsoft.Data.Sqlite.dll'
 )
+
+if ($PSVersionTable.PSEdition -eq 'Desktop')
+{
+    # For .NET Core, we need to load the SQLitePCLRaw provider
+    $assembliesToLoad += 'SQLitePCLRaw.provider.dynamic_cdecl.dll' # Was needed for Windows PowerShell
+}
 
 # Add Native assemblies to process $Env:PATH
 $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
@@ -68,14 +73,22 @@ if (-not (Test-Path -Path $managedAssembliesFolder))
 }
 
 $assembliesToLoad | ForEach-Object {
+    $assemblyFileName = $_
     $assemblyPath = Join-Path -Path $managedAssembliesFolder -ChildPath $_
-    if (Test-Path -Path $assemblyPath)
+    if ([appdomain]::CurrentDomain.GetAssemblies().Where{$_.location -match ('{0}$' -f $assemblyFileName)})
     {
-        Write-Verbose -Message "Loading assembly: $assemblyPath"
-        $null = [System.Reflection.Assembly]::LoadFrom($assemblyPath)
+        Write-Verbose -Message "Assembly already loaded: $_"
     }
     else
     {
-        Write-Error -Message "Assembly not found: $assemblyPath"
+        if (Test-Path -Path $assemblyPath)
+        {
+            Write-Verbose -Message "Loading assembly: $assemblyPath"
+            $null = [System.Reflection.Assembly]::LoadFrom($assemblyPath)
+        }
+        else
+        {
+            Write-Error -Message "Assembly not found: $assemblyPath"
+        }
     }
 }

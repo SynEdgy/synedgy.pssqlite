@@ -41,7 +41,12 @@ function Get-PSSqliteRow
 
         [Parameter()]
         [switch]
-        $KeepAlive
+        $KeepAlive,
+
+        [Parameter(DontShow)]
+        [ValidateSet('DataTable', 'DataReader', 'DataSet','OrderedDictionary','PSCustomObject')]
+        [string]
+        $As = 'PSCustomObject'
     )
 
     begin
@@ -110,7 +115,7 @@ function Get-PSSqliteRow
         }
 
         Write-Verbose -Message ('Executing query: {0} with parameters {1}' -f $sb.ToString(),($sqlParameters | ConvertTo-JSON -Depth 3))
-        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive
+        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive -As $As
     }
 
     end

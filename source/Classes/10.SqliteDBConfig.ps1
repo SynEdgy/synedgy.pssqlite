@@ -15,8 +15,8 @@ class SQLiteDBConfig
 
     SQLiteDBConfig([string]$DatabasePath, [string]$DatabaseFile)
     {
-        $this.DatabasePath = Get-PSSqliteAbsolutePath -Path $DatabasePath
-        $this.DatabaseFile = $DatabaseFile
+        $this.DatabasePath = Get-PSSqliteAbsolutePath -Path (Get-ExpandedString -String $DatabasePath)
+        $this.DatabaseFile = Get-ExpandedString -String $DatabaseFile
         $this.ConnectionString = 'Data Source={0};' -f (Join-Path -Path $DatabasePath -ChildPath $DatabaseFile)
     }
 
@@ -57,12 +57,14 @@ class SQLiteDBConfig
     {
         if ($Definition.Keys -contains 'DatabasePath')
         {
-            $this.DatabasePath = Get-PSSqliteAbsolutePath -Path $Definition['DatabasePath']
+            $dbPath = Get-ExpandedString -String $Definition['DatabasePath']
+            $this.DatabasePath = Get-PSSqliteAbsolutePath -Path $dbPath
         }
 
         if ($Definition.Keys -contains 'DatabaseFile')
         {
-            $this.DatabaseFile = $Definition['DatabaseFile']
+            $dbFile = Get-ExpandedString -String $Definition['DatabaseFile']
+            $this.DatabaseFile = $dbFile
         }
 
         if ($Definition.Keys -contains 'ConnectionString')
