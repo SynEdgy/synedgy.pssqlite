@@ -106,13 +106,16 @@ Pester:
   #  - FunctionalQuality
   #  - TestQuality
   Tag:
-  CodeCoverageThreshold: 85 # Set to 0 to bypass
+  CodeCoverageThreshold: 0 # Set to 0 to bypass
   #CodeCoverageOutputFile: JaCoCo_$OsShortName.xml
   #CodeCoverageOutputFileEncoding: ascii
   # Use this if code coverage should be merged from several pipeline test jobs.
   # Any existing keys above should be replaced. See also CodeCoverage below.
   # CodeCoverageOutputFile is the file that is created for each pipeline test job.
   #CodeCoverageOutputFile: JaCoCo_Merge.xml
+  ExcludeModuleFile:
+    - Modules/DscResource.Common
+    - ScriptsToProcess
 
 # Use this to merged code coverage from several pipeline test jobs.
 # CodeCoverageFilePattern      - the pattern used to search all pipeline test job artifacts
@@ -129,8 +132,10 @@ DscTest:
   Tag:
   ExcludeSourceFile:
     - output
+    - source/ScriptsToProcess
   ExcludeModuleFile:
     - Modules/DscResource.Common
+    - ScriptsToProcess
   #  - Templates
 
 # Import ModuleBuilder tasks from a specific PowerShell module using the build

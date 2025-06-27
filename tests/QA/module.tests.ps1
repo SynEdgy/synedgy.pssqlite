@@ -17,7 +17,7 @@ BeforeDiscovery {
 
     $mut = Get-Module -Name $script:moduleName -ListAvailable |
         Select-Object -First 1 |
-            Import-Module -Force -ErrorAction Stop -PassThru
+            Import-Module -Force -ErrorAction Stop -PassThru | Where-Object -FilterScript {$_.Guid -ne (new-guid -Empty)}
 }
 
 BeforeAll {
@@ -213,4 +213,3 @@ Describe 'Help for module' -Tags 'helpQuality' {
         }
     }
 }
-
