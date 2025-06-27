@@ -17,7 +17,7 @@ BeforeDiscovery {
 
     $mut = Get-Module -Name $script:moduleName -ListAvailable |
         Select-Object -First 1 |
-            Import-Module -Force -ErrorAction Stop -PassThru | Where-Object -FilterScript {$_.Guid -ne (new-guid -Empty)}
+            Import-Module -Force -ErrorAction Stop -PassThru | Where-Object -FilterScript {$_.Guid -ne (New-Guid -InputObject '00000000-0000-0000-0000-000000000000')}
 }
 
 BeforeAll {
