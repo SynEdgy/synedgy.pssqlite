@@ -3,6 +3,44 @@ using namespace System.Collections.Specialized
 
 function Invoke-PSSqliteQuery
 {
+    <#
+    .SYNOPSIS
+    Executes a SQL query against a SQLite database and returns the results in the specified format.
+
+    .DESCRIPTION
+    This function provides a way to execute SQL queries against a SQLite database and retrieve the results in various formats.
+
+    .PARAMETER SqliteConnection
+    A SqliteConnection object used to connect to the SQLite database.
+
+    .PARAMETER CommandText
+    The SQL query to execute.
+    This can be a simple SELECT statement or any valid SQL command.
+
+    .PARAMETER As
+    The format in which to return the results. Possible values are 'DataTable', 'DataReader', 'DataSet', 'OrderedDictionary', and 'PSCustomObject'.
+
+    .PARAMETER CastAs
+    An optional type to cast the results to.
+
+    .PARAMETER Parameters
+    A hashtable of parameters to include in the query.
+
+    .PARAMETER CommandTimeout
+    The timeout period for the command, in seconds.
+
+    .PARAMETER keepAlive
+    A switch parameter that, if specified, will keep the database connection open after the command completes.
+    This is useful for scenarios where multiple commands will be executed in succession,
+    preventing the overhead of opening and closing the connection repeatedly.
+    If this parameter is not specified, the connection will be closed after the command completes.
+
+    .EXAMPLE
+    Invoke-PSSqliteQuery -SqliteConnection $connection -CommandText "SELECT * FROM Users" -As DataTable
+
+    .NOTES
+    This function is part of a module that provides CRUD operations for SQLite databases.
+    #>
     [CmdletBinding()]
     param
     (

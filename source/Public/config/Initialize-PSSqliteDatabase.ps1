@@ -17,9 +17,13 @@ function Initialize-PSSqliteDatabase
 
         .PARAMETER MigrationMode
         Migration mode for the database initialization. Options are INCREMENTAL, CREATE, or OVERWRITE.
+        INCREMENTAL: Assume the database already exists and only apply changes if the registered version is lower than the expected version.
+        CREATE: Only create a new database if it doesn't exist already.
+        OVERWRITE: Remove the db file and create a new one, (!!!) dropping all data (!!!).
 
         .PARAMETER Force
-        If set, forces the initialization process, potentially overwriting existing configurations.
+        If set, forces the initialization process, overwriting existing configurations, and replacing the database file if it exists.
+        ALL DATA WILL BE LOST.
 
     #>
     [CmdletBinding(DefaultParameterSetName = 'byPath')]

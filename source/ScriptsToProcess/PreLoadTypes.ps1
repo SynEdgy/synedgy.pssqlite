@@ -11,7 +11,7 @@ $assembliesToLoad = @(
 
 if ($PSVersionTable.PSEdition -eq 'Desktop')
 {
-    # For .NET Core, we need to load the SQLitePCLRaw provider
+    # For .NET Framework, we need to load the SQLitePCLRaw provider
     $assembliesToLoad += 'SQLitePCLRaw.provider.dynamic_cdecl.dll' # Was needed for Windows PowerShell
 }
 

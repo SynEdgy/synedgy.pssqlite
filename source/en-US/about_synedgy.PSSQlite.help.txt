@@ -1,24 +1,41 @@
 TOPIC
-    about_synedgy.PSSQlite
+    about_synedgy.PSSqlite
 
 SHORT DESCRIPTION
-    A Sqlite module for PowerShell
+    A Sqlite module for PowerShell, using Microsoft.Data.Sqlite
 
 LONG DESCRIPTION
-    A Sqlite module for PowerShell
+    This module provides a set of cmdlets for working with SQLite databases in PowerShell.
+    It allows you to perform CRUD (Create, Read, Update, Delete) operations on SQLite databases
+    using a simple and intuitive syntax, leveraging the Microsoft.Data.Sqlite library.
+    The CRUD operations are designed to be easy to use, with support for various data formats
+    such as DataTable, DataReader, DataSet, OrderedDictionary, and PSCustomObject, and do not
+    require the use of SQL queries directly, making it accessible for users who may not be familiar with SQL.
+    When the basic feature set is not enough, you can use the
+    `Invoke-PSSqliteQuery` cmdlet to execute raw SQL queries directly against the database.
 
 EXAMPLES
-    PS C:\> {{ add examples here }}
+    PS C:\> Install-Module synedgy.PSSqlite -AllowPreRelease -Force
+    PS C:\> Import-Module synedgy.PSSqlite
+    PS C:\> Get-PSSqliteRow -SqliteDBConfig (Get-SqliteDBConfig -Path <path_to_config>) -TableName 'Employees' -ClauseData @{ Name = 'John Doe' } -As 'PSCustomObject'
 
 NOTE:
     Thank you to all those who contributed to this module, by writing code, sharing opinions, and provided feedback.
+
+NOTE:
+    This module is in active development, and new features and improvements are being added regularly.
+    If you have any suggestions or issues, please feel free to open an issue on the GitHub repository.
+
+NOTE:
+    The module exposes type accelerators like [synedgy.PSSqlite.SQLiteDBConfig] and [synedgy.PSSqlite.SQLiteConnection]
+    for easy access to the configuration and connection objects used in the cmdlets, mapping to internal PS classes.
+    When using the `using` statement, you can access these types directly in your scripts ([SqliteDBConfig] and [SQLiteConnection]).
 
 TROUBLESHOOTING NOTE:
     Look out on the Github repository for issues and new releases.
 
 SEE ALSO
-    - {{ Please add Project URI such as github }}}
+    - https://synedgy.com/
 
 KEYWORDS
-    {{ Add comma separated keywords here }}
-
+    SQLite, PowerShell, CRUD, Microsoft.Data.Sqlite
