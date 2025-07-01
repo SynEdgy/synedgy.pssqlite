@@ -1,4 +1,4 @@
-# synedgy.PSSQlite
+# synedgy.PSSqlite
 
 A Sqlite module for PowerShell
 

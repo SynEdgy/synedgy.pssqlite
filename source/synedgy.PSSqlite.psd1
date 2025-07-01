@@ -1,7 +1,7 @@
 @{
 
 # Script module or binary module file associated with this manifest.
-RootModule = 'synedgy.PSSQlite.psm1'
+RootModule = 'synedgy.PSSqlite.psm1'
 
 # Version number of this module.
 ModuleVersion = '0.0.1'
@@ -16,10 +16,10 @@ GUID = 'a45369b1-4898-4291-992b-62151046814e'
 Author = 'Gael Colas'
 
 # Company or vendor of this module
-CompanyName = 'Gael Colas'
+CompanyName = 'SynEdgy'
 
 # Copyright statement for this module
-Copyright = '(c) Gael Colas. All rights reserved.'
+Copyright = '(c) SynEdgy. All rights reserved.'
 
 # Description of the functionality provided by this module
 Description = 'A Sqlite module for PowerShell'

@@ -20,7 +20,7 @@ function Compare-PSSqliteDBVersion
         'IsDeployed' = $false
         'direction' = '!='
         'Reasons' = @()
-        PSTypeName = 'synedgy.PSSQLite.DBVersionComparisonResult'
+        PSTypeName = 'synedgy.PSSqlite.DBVersionComparisonResult'
     }
 
     if (-not $DatabaseConfig.databaseExists())
