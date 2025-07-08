@@ -14,3 +14,7 @@ and APIs with a simple database backend.
 ## Read more
 
 Read more on our blog post at [https://synegdy.com/](https://synedgy.com/).
+
+## Notes
+
+Thanks Julien Nury for some of the ideas!
