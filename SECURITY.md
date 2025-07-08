@@ -20,7 +20,7 @@ for more information.
 If the repository does not have that option then please
 report the security issue privately to one or several maintainers of the
 repository. The easiest way to do so is to send us a direct message via
-Twitter (X), Slack, Discord, or find us  on some other social platform.
+Discord, LinkedIn, or find us  on some other social platform.
 
 You should receive a response within 48 hours. If for some reason you do not,
 please follow up by other means or to other contributors.
