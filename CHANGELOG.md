@@ -7,24 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- For new features.
+- Basic CRUD support with `Get-PSSqliteRow`, `New-PSSqliteRow`,
+  `Remove-PSSqliteRow`, `Set-PSSqliteRow`.
+- SQL generation for create table statements with `Initialize-PSSqliteDatabase`.
+- Version comparing with built-in `_metadata` table and `Compare-PSSqliteDBVersion`.
 
 ### Changed
 
-- For changes in existing functionality.
-
-### Deprecated
-
-- For soon-to-be removed features.
-
-### Removed
-
-- For now removed features.
-
-### Fixed
-
-- For any bug fix.
-
-### Security
-
-- In case of vulnerabilities.
+- Updated README.md.
