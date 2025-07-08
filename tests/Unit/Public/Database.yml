@@ -71,7 +71,7 @@ Schema:
       unique: true
       ifNotExists: true
       # schema: main.
-      # WHERE: column2 IS NOT NULL
+      # WHERE: column2 IS NOT NULL # for partial indexes
 
     index2:
       table: Table2

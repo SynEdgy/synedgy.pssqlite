@@ -1,13 +1,16 @@
 # synedgy.PSSqlite
 
-A Sqlite module for PowerShell
+A Sqlite module for PowerShell using Microsoft.Data.Sqlite.
 
-## Make it yours
+## In short
 
----
-Generated with Plaster and the SampleModule template
+This module let you execute SQL queries against a SQLite database using Microsoft.Data.Sqlite.
+Used as required module, and using a custom database configuration file, it can generate
+the database and provide helpers for simple CRUD operations without writing SQL.
 
+This helps you getting started quickly with PowerShell Universal to build apps
+and APIs with a simple database backend.
 
-This is a sample Readme
+## Read more
 
-## Make it yours
+Read more on our blog post at [https://synegdy.com/](https://synedgy.com/).

@@ -17,7 +17,6 @@ Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters
 
 $c.Close()
 
-
 $c = New-PSSqliteConnection -DatabaseFile 'test.sqlite'
 
 # Invoke-PSSqliteQuery -SqliteConnection $c -CommandText "SELECT * FROM characters;" -keepAlive
