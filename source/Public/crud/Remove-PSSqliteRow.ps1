@@ -1,4 +1,4 @@
-function Remove-PSSSqliteRow
+function Remove-PSSqliteRow
 {
     <#
     .SYNOPSIS
