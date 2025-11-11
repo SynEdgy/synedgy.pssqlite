@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Remove-PSSqliteRow`, `Set-PSSqliteRow`.
 - SQL generation for create table statements with `Initialize-PSSqliteDatabase`.
 - Version comparing with built-in `_metadata` table and `Compare-PSSqliteDBVersion`.
+- Added changelog PR.
 
 ### Changed
 
