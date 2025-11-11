@@ -99,7 +99,7 @@ function Set-PSSqliteRow
             $SqliteConnection = New-PSSqliteConnection -ConnectionString $SqliteDBConfig.ConnectionString
         }
 
-        $tableDefinition = $SqliteDBConfig.Schema.tables[0].Where{$_.Name -eq $TableName}[0]
+        $tableDefinition = $SqliteDBConfig.Schema.tables.Where{$_.Name -eq $TableName}[0]
         $columnNames = $tableDefinition.Columns.Name
     }
 
