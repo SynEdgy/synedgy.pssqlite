@@ -2,18 +2,22 @@
 $assembliesToLoad = @(
     # This list should be loaded in the order they are listed
     'System.Runtime.CompilerServices.Unsafe.dll' # has to be 4.0.4.1 from nuget package version 4.5.3
+    'System.Buffers.dll'
+    'System.Numerics.Vectors.dll'
     'System.Memory.dll'
     'SQLitePCLRaw.provider.e_sqlite3.dll'
+    # 'SQLitePCLRaw.provider.dynamic_cdecl.dll'
     'SQLitePCLRaw.core.dll'
     'SQLitePCLRaw.batteries_v2.dll'
+
     'Microsoft.Data.Sqlite.dll'
 )
 
-if ($PSVersionTable.PSEdition -eq 'Desktop')
-{
-    # For .NET Framework, we need to load the SQLitePCLRaw provider
-    $assembliesToLoad += 'SQLitePCLRaw.provider.dynamic_cdecl.dll' # Was needed for Windows PowerShell
-}
+# if ($PSVersionTable.PSEdition -eq 'Desktop')
+# {
+#     # For .NET Framework, we need to load the SQLitePCLRaw provider
+#     $assembliesToLoad += 'SQLitePCLRaw.provider.dynamic_cdecl.dll' # Was needed for Windows PowerShell
+# }
 
 # Add Native assemblies to process $Env:PATH
 $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
@@ -44,6 +48,7 @@ $expectedRID = '{0}-{1}' -f $os, $arch
 $runtimesPath = Join-Path -Path $libPath -ChildPath 'runtimes'
 $osRuntimePath = Join-Path -Path $runtimesPath -ChildPath $expectedRID
 $nativePath = Join-Path -Path $osRuntimePath -ChildPath 'native'
+# $nativePath = $osRuntimePath
 if (-not (Test-Path -Path $nativePath))
 {
     Write-Error -Message "Native path not found: $nativePath"
@@ -63,7 +68,7 @@ else
 
 # Load the managed assemblies in order
 # TODO: Test if that works and remove the if block
-$framework = if ($IsCoreCLR) { 'netstandard2.0' } else { 'netstandard2.0' } # or 'net461'
+$framework = 'netstandard2.0'
 $managedAssembliesFolder = Join-Path -Path $libPath -ChildPath $framework
 Write-Debug -Message "Managed assemblies folder: $managedAssembliesFolder"
 if (-not (Test-Path -Path $managedAssembliesFolder))
@@ -74,7 +79,7 @@ if (-not (Test-Path -Path $managedAssembliesFolder))
 
 $assembliesToLoad | ForEach-Object {
     $assemblyFileName = $_
-    $assemblyPath = Join-Path -Path $managedAssembliesFolder -ChildPath $_
+    $assemblyPath = Join-Path -Path $managedAssembliesFolder -ChildPath $assemblyFileName
     if ([appdomain]::CurrentDomain.GetAssemblies().Where{$_.location -match ('{0}$' -f $assemblyFileName)})
     {
         Write-Verbose -Message "Assembly already loaded: $_"

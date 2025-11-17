@@ -530,7 +530,7 @@
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/async">Async Limitations</seealso>
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/batching">Batching</seealso>
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/database-errors">Database Errors</seealso>
-            <exception cref="T:System.OperationCanceledException">If the <see cref="T:System.Threading.CancellationToken"/> is canceled.</exception>
+            <exception cref="T:System.OperationCanceledException">If the <see cref="T:System.Threading.CancellationToken" /> is canceled.</exception>
         </member>
         <member name="M:Microsoft.Data.Sqlite.SqliteCommand.ExecuteReaderAsync(System.Data.CommandBehavior)">
             <summary>
@@ -552,7 +552,7 @@
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/async">Async Limitations</seealso>
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/batching">Batching</seealso>
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/database-errors">Database Errors</seealso>
-            <exception cref="T:System.OperationCanceledException">If the <see cref="T:System.Threading.CancellationToken"/> is canceled.</exception>
+            <exception cref="T:System.OperationCanceledException">If the <see cref="T:System.Threading.CancellationToken" /> is canceled.</exception>
         </member>
         <member name="M:Microsoft.Data.Sqlite.SqliteCommand.ExecuteDbDataReaderAsync(System.Data.CommandBehavior,System.Threading.CancellationToken)">
             <summary>
@@ -562,7 +562,7 @@
             <param name="cancellationToken">The token to monitor for cancellation requests.</param>
             <returns>A task representing the asynchronous operation.</returns>
             <seealso href="https://docs.microsoft.com/dotnet/standard/data/sqlite/async">Async Limitations</seealso>
-            <exception cref="T:System.OperationCanceledException">If the <see cref="T:System.Threading.CancellationToken"/> is canceled.</exception>
+            <exception cref="T:System.OperationCanceledException">If the <see cref="T:System.Threading.CancellationToken" /> is canceled.</exception>
         </member>
         <member name="M:Microsoft.Data.Sqlite.SqliteCommand.ExecuteNonQuery">
             <summary>
@@ -2659,6 +2659,13 @@
             </summary>
             <value>A value indicating whether the connection will be pooled.</value>
         </member>
+        <member name="P:Microsoft.Data.Sqlite.SqliteConnectionStringBuilder.Vfs">
+            <summary>
+                Gets or sets the SQLite VFS used by the connection.
+            </summary>
+            <value>The SQLite VFS used by the connection.</value>
+            <seealso href="https://www.sqlite.org/vfs.html">SQLite VFS</seealso>
+        </member>
         <member name="P:Microsoft.Data.Sqlite.SqliteConnectionStringBuilder.Item(System.String)">
             <summary>
                 Gets or sets the value associated with the specified key.
@@ -3507,21 +3514,21 @@
         </member>
         <member name="M:Microsoft.Data.Sqlite.SqliteTransaction.Save(System.String)">
             <summary>
-            Creates a savepoint in the transaction. This allows all commands that are executed after the savepoint was
-            established to be rolled back, restoring the transaction state to what it was at the time of the savepoint.
+                Creates a savepoint in the transaction. This allows all commands that are executed after the savepoint was
+                established to be rolled back, restoring the transaction state to what it was at the time of the savepoint.
             </summary>
             <param name="savepointName">The name of the savepoint to be created.</param>
         </member>
         <member name="M:Microsoft.Data.Sqlite.SqliteTransaction.Rollback(System.String)">
             <summary>
-            Rolls back all commands that were executed after the specified savepoint was established.
+                Rolls back all commands that were executed after the specified savepoint was established.
             </summary>
             <param name="savepointName">The name of the savepoint to roll back to.</param>
         </member>
         <member name="M:Microsoft.Data.Sqlite.SqliteTransaction.Release(System.String)">
             <summary>
-            Destroys a savepoint previously defined in the current transaction. This allows the system to
-            reclaim some resources before the transaction ends.
+                Destroys a savepoint previously defined in the current transaction. This allows the system to
+                reclaim some resources before the transaction ends.
             </summary>
             <param name="savepointName">The name of the savepoint to release.</param>
         </member>
