@@ -27,6 +27,8 @@ applyTo: 'tests/**/*.tests.ps1'
 - Keep tests consistent with the existing `tests\QA` and `tests\Unit\Public` patterns in this repository.
 - When validating class or type-accelerator behavior, import the module before invoking code paths that reference exported accelerators.
 - Use in-memory SQLite connections with `New-PSSqliteConnection` by default unless the scenario specifically requires a file-backed database.
+- Prefer file-backed, config-driven tests when validating the real consumer workflow: create a temporary `*.PSSqliteConfig.y*ml`, call `Initialize-PSSqliteDatabase`, then exercise CRUD through `ClauseData` and `RowData` shapes that mirror wrapper functions using `$PSBoundParameters`.
+- When module source changes affect runtime behavior, run `./build.ps1 -Tasks build` before targeted `./build.ps1 -Tasks test -PesterPath ...` runs, because the tests import the built module from `output\module`.
 - Use PowerShell-version or platform guards only when behavior truly differs between Windows PowerShell 5.1 and PowerShell 7, or between the runtime-specific native assemblies loaded by `PreLoadTypes.ps1`.
 
 ## Validation commands
