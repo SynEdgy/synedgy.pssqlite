@@ -120,11 +120,16 @@ function Set-PSSqliteRow
             }
         }
 
+        if ($sqlParameters.Count -eq 0)
+        {
+            throw [System.ArgumentException]::new("No valid row data was provided for table '$TableName'.")
+        }
+
         [System.Text.StringBuilder]$sb = [System.Text.StringBuilder]::new()
         $null = $sb.Append(('UPDATE '))
         $null = $sb.Append($TableName)
         $null = $sb.AppendLine(' SET ')
-        $null = $sb.AppendLine(($RowData.Keys.ForEach{ '{0} = @{0}' -f $_ } -join ', '))
+        $null = $sb.AppendLine(($sqlParameters.Keys.ForEach{ '{0} = @{0}' -f $_ } -join ', '))
         $null = $sb.AppendLine(' WHERE 1=1')
         if (-not $CaseSensitive)
         {
@@ -194,5 +199,22 @@ function Set-PSSqliteRow
 
         Write-Verbose -Message ('Executing query: {0}' -f $sb.ToString())
         Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive
+    }
+
+    end
+    {
+        if (-not $KeepAlive)
+        {
+            try
+            {
+                $SqliteConnection.Close()
+                [Microsoft.Data.Sqlite.SqliteConnection]::ClearPool($SqliteConnection)
+                Write-Debug -Message 'Database connection closed.'
+            }
+            catch
+            {
+                Write-Warning -Message 'Failed to close the database connection.'
+            }
+        }
     }
 }

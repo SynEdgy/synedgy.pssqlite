@@ -18,6 +18,7 @@
 - This module must remain compatible with Windows PowerShell 5.1 and PowerShell 7.
 - `source\ScriptsToProcess\PreLoadTypes.ps1` is responsible for loading the native SQLite library and the managed SQLite assemblies before the rest of the module parses; changes there must preserve runtime and architecture resolution.
 - `source\suffix.ps1` exports PowerShell classes through module-qualified type accelerators; changes there must preserve import and cleanup behavior.
+- The primary consumer workflow is config-backed CRUD: load a `*.PSSqliteConfig.y*ml` file, initialize the database, and use wrapper functions that pass `$PSBoundParameters` into `ClauseData` or `RowData`.
 - New or updated functions must keep comment-based help complete, including at least one `.EXAMPLE`, because `tests\QA\module.tests.ps1` enforces help coverage for exported functions.
 - Add an `Unreleased` changelog entry in `CHANGELOG.md` for behavior or workflow changes.
 

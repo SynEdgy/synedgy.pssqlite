@@ -27,6 +27,12 @@ Every validation command must go through `./build.ps1`.
 - Do not run `Invoke-Pester` directly.
 - Do not call `Build-Module` directly.
 - Do not manually edit `PSModulePath`.
+- When source changes affect module runtime behavior, build first so tests import the current artifact from `output\module`:
+
+```powershell
+./build.ps1 -Tasks build
+```
+
 - If the change is to `synedgy.pssqlite.csproj`, `source\lib`, or `source\ScriptsToProcess\PreLoadTypes.ps1`, refresh SQLite package assets before validation:
 
 ```powershell
@@ -47,6 +53,8 @@ dotnet restore .\synedgy.pssqlite.csproj --packages .\output\NuGetPackages
 ```powershell
 ./build.ps1 -Tasks test -PesterPath '<target_test>' -CodeCoverageThreshold 0
 ```
+
+   Build first if the changed code is loaded from the built module artifact.
 
 2. If changes are limited to one public or private function, run the matching unit test file under `tests/Unit/Public` or `tests/Unit/Private`.
 

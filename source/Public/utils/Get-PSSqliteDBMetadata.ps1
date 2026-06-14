@@ -32,13 +32,30 @@ function Get-PSSqliteDBMetadata
             if ($MetadataKey -contains '*')
             {
                 $query = 'SELECT key, value from _metadata;'
-                $metadata = Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $query -As OrderedDictionary
+                $metadataRows = @(Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $query -As OrderedDictionary)
             }
             else
             {
-                # If specific keys are requested, format the query accordingly
-                $query = 'SELECT key, value from _metadata WHERE key IN (''{0}'');' -f ($MetadataKey -join "','")
-                $metadata = Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $query -As OrderedDictionary
+                $sqlParameters = @{}
+                $keyPlaceholders = for ($index = 0; $index -lt $MetadataKey.Count; $index++)
+                {
+                    $parameterName = 'MetadataKey{0}' -f $index
+                    $sqlParameters[$parameterName] = $MetadataKey[$index]
+                    '@{0}' -f $parameterName
+                }
+
+                $query = 'SELECT key, value from _metadata WHERE key IN ({0});' -f ($keyPlaceholders -join ', ')
+                $metadataRows = @(Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $query -Parameters $sqlParameters -As OrderedDictionary)
+            }
+
+            if ($metadataRows.Count -gt 0)
+            {
+                $metadata = [ordered]@{}
+
+                foreach ($row in $metadataRows)
+                {
+                    $metadata[$row['key']] = $row['value']
+                }
             }
         }
 
