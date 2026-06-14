@@ -63,6 +63,69 @@ Schema:
 
         col2:
           type: REAL
+  Views:
+    UserSummary:
+      IfNotExists: true
+      Columns:
+        UserId:
+          Source:
+            Table: u
+            Column: id
+        UserName:
+          Source:
+            Table: u
+            Column: name
+        UserEmail:
+          Source:
+            Table: u
+            Column: email
+        UserAge:
+          Source:
+            Table: u
+            Column: age
+        LinkedValue:
+          Source:
+            Table: t1
+            Column: column2
+      Select:
+        Distinct: false
+      From:
+        Table: users
+        Alias: u
+      Joins:
+        - Type: LEFT
+          Table: Table1
+          Alias: t1
+          On:
+            All:
+              - Left:
+                  Table: u
+                  Column: id
+                Operator: '='
+                Right:
+                  Table: t1
+                  Column: id
+      Where:
+        All:
+          - Left:
+              Table: u
+              Column: age
+            Operator: '>='
+            Right: 18
+      OrderBy:
+        - Column: UserId
+          Direction: ASC
+      GroupBy:
+        - Table: u
+          Column: id
+        - Table: u
+          Column: name
+        - Table: u
+          Column: email
+        - Table: u
+          Column: age
+        - Table: t1
+          Column: column2
   Indexes:
     index1:
       name: index_name2

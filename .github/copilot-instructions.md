@@ -8,6 +8,10 @@
 - Test with `./build.ps1 -Tasks test` or another named workflow from `build.yaml`.
 - Do not call `Invoke-Pester`, `Build-Module`, or other build helpers directly from a fresh shell.
 - Do not manually prepend `output/RequiredModules` or `output/module` to `PSModulePath`.
+- Treat `output\module` as disposable build output that can be locked by another PowerShell process if it imported the built module.
+- Prefer fresh, short-lived shells for build and test commands instead of reusing a session that already imported the module from `output\module`.
+- Before rebuilding in the same shell, unload the module with `Remove-Module synedgy.PSSqlite -Force` and dispose any SQLite connections you opened.
+- If a build fails with `The process cannot access the file ... output\module\...\synedgy.PSSqlite.psm1 because it is being used by another process`, clear `output\module` from a fresh shell and rerun `./build.ps1 -Tasks build`.
 
 ## Repository constraints
 

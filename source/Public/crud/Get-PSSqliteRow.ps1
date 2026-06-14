@@ -117,8 +117,13 @@ function Get-PSSqliteRow
             $SqliteConnection = New-PSSqliteConnection -ConnectionString $SqliteDBConfig.ConnectionString
         }
 
-        $tableDefinition = $SqliteDBConfig.Schema.tables.Where{$_.Name -eq $TableName}[0]
-        $columnNames = $tableDefinition.Columns.Name
+        $tableDefinition = $SqliteDBConfig.Schema.GetSelectable($TableName)
+        if (-not $tableDefinition)
+        {
+            throw [System.ArgumentException]::new("Table or view '$TableName' does not exist in the database schema.")
+        }
+
+        $columnNames = @($tableDefinition.Columns.Name)
     }
 
     process
@@ -183,11 +188,11 @@ function Get-PSSqliteRow
                 [System.Management.Automation.PSCmdlet]::OptionalCommonParameters
             ))
             {
-                Write-Debug -Message "Column '$key' is not a valid column in table '$TableName'."
+                Write-Debug -Message "Column '$key' is not a valid column in table or view '$TableName'."
             }
             else
             {
-                Write-Warning -Message "Column '$key' is not a valid column in table '$TableName'."
+                Write-Warning -Message "Column '$key' is not a valid column in table or view '$TableName'."
             }
         }
 

@@ -19,6 +19,92 @@ APIs that need a lightweight single-file database.
 
 - Blog post: [New SQLite module for PowerShell](https://synedgy.com/new-sqlite-module-for-powershell/)
 
+## Getting started
+
+This example keeps everything in memory and shows the full flow: YAML config, tables,
+a view, initialization, and CRUD.
+
+```powershell
+$yaml = @'
+ConnectionString: Data Source=:memory:
+Version: 1.0.0
+Schema:
+  Tables:
+    Cars:
+      Columns:
+        Id:
+          Type: INTEGER
+          PrimaryKey: true
+          AllowNull: false
+        Make:
+          Type: TEXT
+        Model:
+          Type: TEXT
+        Colour:
+          Type: TEXT
+        Year:
+          Type: INTEGER
+  Views:
+    CarSummary:
+      Columns:
+        CarId:
+          Source:
+            Table: Cars
+            Column: Id
+        Description:
+          Expression: Cars.Make || ' ' || Cars.Model
+        Colour:
+          Source:
+            Table: Cars
+            Column: Colour
+      From:
+        Table: Cars
+'@
+
+$dbConfig = Get-PSSqliteDBConfig -Definition ($yaml | ConvertFrom-Yaml -Ordered)
+$connection = New-PSSqliteConnection -ConnectionString $dbConfig.ConnectionString
+
+try
+{
+    Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig
+
+    New-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars' -RowData @{
+        Make = 'Toyota'
+        Model = 'Corolla'
+        Colour = 'Yellow'
+        Year = 2024
+    }
+
+    New-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars' -RowData @{
+        Make = 'Ford'
+        Model = 'Focus'
+        Colour = 'Blue'
+        Year = 2020
+    }
+
+    Get-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars'
+    Get-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars' -ClauseData @{ Colour = 'Yel*' }
+    Get-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'CarSummary'
+
+    Set-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars' -RowData @{
+        Colour = 'Red'
+    } -ClauseData @{
+        Make = 'Toyota'
+        Model = 'Corolla'
+    }
+
+    Remove-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars' -ClauseData @{
+        Make = 'Ford'
+    }
+
+    Get-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'CarSummary'
+}
+finally
+{
+    $connection.Dispose()
+}
+```
+
 ## Core concepts
 
 ### 1. Configuration-driven schema
@@ -28,6 +114,7 @@ The module expects a YAML configuration that describes:
 - where the database file should live
 - the schema version
 - the tables and columns to create
+- optional views to expose read models
 
 Example:
 
@@ -51,6 +138,20 @@ Schema:
           Type: TEXT
         Year:
           Type: INTEGER
+  Views:
+    CarSummary:
+      Columns:
+        CarId:
+          Source:
+            Table: c
+            Column: Id
+        Make:
+          Source:
+            Table: c
+            Column: Make
+      From:
+        Table: Cars
+        Alias: c
 ```
 
 If your module follows the convention `config\<ModuleName>.PSSqliteConfig.yml`, you can
@@ -69,6 +170,11 @@ Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig
 
 `Initialize-PSSqliteDatabase` creates the database, applies the schema, and maintains the
 `_metadata` table used to track the deployed schema version.
+
+Views can use either:
+
+- a structured YAML definition with `Columns`, `From`, `Joins`, `Where`, `GroupBy`, `Having`, and `OrderBy`
+- a raw `Sql:` block for advanced SQLite view definitions while still declaring output columns for `Get-PSSqliteRow`
 
 ### 3. CRUD helpers without raw SQL
 
@@ -99,6 +205,9 @@ The CRUD commands are:
 - `New-PSSqliteRow`
 - `Set-PSSqliteRow`
 - `Remove-PSSqliteRow`
+
+`Get-PSSqliteRow` can target either a table or a configured view. The write helpers stay
+table-oriented.
 
 Common behaviors:
 
