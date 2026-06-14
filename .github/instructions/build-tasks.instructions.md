@@ -21,6 +21,8 @@ applyTo: '{build.ps1,build.yaml,.build/tasks/*.build.ps1,.pipelines/*.yml,.pipel
 - Keep required modules resolving into `output\RequiredModules`.
 - Keep the transient NuGet restore under `output\NuGetPackages` and the committed module assets under `source\lib`.
 - Keep build artifacts flowing through `output\module` rather than ad-hoc locations.
+- Assume `output\module` may be locked if another PowerShell process imported the built module from there; prefer fresh shells for build/test invocations.
+- Before rebuilding in the same shell after an import, unload the module with `Remove-Module synedgy.PSSqlite -Force` and dispose any open SQLite connections.
 - When validating long builds or tests, pipe `./build.ps1 ...` output through `Tee-Object` to a log outside `output\*`.
 
 ## Logging pattern

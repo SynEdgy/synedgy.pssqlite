@@ -4,6 +4,7 @@
 $ExportableTypes = @(
     'SqliteDBConfig'
     'SqliteDBSchema'
+    'SqliteView'
     'SqliteCheckTableConstraint'
     'SqlitePrimaryKeyTableConstraint'
     'SqliteForeignKeyTableConstraint'

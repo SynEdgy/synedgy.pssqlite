@@ -33,6 +33,9 @@ Every validation command must go through `./build.ps1`.
 ./build.ps1 -Tasks build
 ```
 
+- Prevent `output\module` file locks by preferring fresh shells for build and test commands. If you already imported the built module in the current shell, unload it with `Remove-Module synedgy.PSSqlite -Force` and dispose any open SQLite connections before rebuilding.
+- If build output is still locked, start a fresh shell, remove `output\module`, and rerun the build.
+
 - If the change is to `synedgy.pssqlite.csproj`, `source\lib`, or `source\ScriptsToProcess\PreLoadTypes.ps1`, refresh SQLite package assets before validation:
 
 ```powershell
