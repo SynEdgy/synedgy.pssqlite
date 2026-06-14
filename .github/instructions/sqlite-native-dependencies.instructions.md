@@ -28,6 +28,7 @@ dotnet restore .\synedgy.pssqlite.csproj --packages .\output\NuGetPackages
 - Keep managed assemblies compatible with Windows PowerShell 5.1 and PowerShell 7.
 - Keep native runtime assets for the PowerShell-compatible RIDs this module supports.
 - Exclude UAP, browser, Catalyst, and unsupported Linux architecture assets from `source\lib`.
+- Keep packaged native libraries marked as binary in `.gitattributes`, including `.dll`, `.so`, `.dylib`, and archive formats, so cross-platform artifacts are not line-ending normalized.
 
 ## Preload behavior
 

@@ -13,3 +13,5 @@
 *.png binary
 *.dll binary
 *.so  binary
+*.dylib binary
+*.a binary
