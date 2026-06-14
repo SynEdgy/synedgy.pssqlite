@@ -8,7 +8,8 @@ applyTo: '{source/suffix.ps1,source/Classes/*.ps1,source/Enum/*.ps1,source/Scrip
 ## Purpose
 
 - This repository uses `source\suffix.ps1` to expose selected PowerShell classes after module import.
-- This repository uses `source\ScriptsToProcess\PreLoadTypes.ps1` to load managed and native SQLite assemblies before the module imports.
+- This repository uses `source\ScriptsToProcess\PreLoadTypes.ps1` to load the native SQLite library and the managed SQLite assemblies from `source\lib` before the module imports.
+- The contents of `source\lib` are sourced from the NuGet packages restored for `synedgy.pssqlite.csproj`.
 
 ## Type accelerator rules
 
@@ -20,8 +21,11 @@ applyTo: '{source/suffix.ps1,source/Classes/*.ps1,source/Enum/*.ps1,source/Scrip
 
 ## Assembly preload rules
 
+- Keep the committed `source\lib` contents aligned with the package versions resolved from `synedgy.pssqlite.csproj`.
+- Restore NuGet packages into `output\NuGetPackages`, then copy the required assets into `source\lib`; do not load assemblies directly from the transient restore cache at runtime.
 - Keep the assembly list in `source\ScriptsToProcess\PreLoadTypes.ps1` ordered when load order matters.
 - Preserve the runtime identifier and architecture resolution logic for Desktop and Core editions.
+- Preserve the behavior that loads the native SQLite library from its resolved full path before `Microsoft.Data.Sqlite` initializes.
 - Preserve the behavior that prepends the resolved native runtime folder to `PATH`.
 - Fail explicitly when expected runtime or managed assembly folders are missing; do not add silent fallbacks.
 

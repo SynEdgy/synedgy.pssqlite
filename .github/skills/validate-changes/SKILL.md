@@ -27,6 +27,13 @@ Every validation command must go through `./build.ps1`.
 - Do not run `Invoke-Pester` directly.
 - Do not call `Build-Module` directly.
 - Do not manually edit `PSModulePath`.
+- If the change is to `synedgy.pssqlite.csproj`, `source\lib`, or `source\ScriptsToProcess\PreLoadTypes.ps1`, refresh SQLite package assets before validation:
+
+```powershell
+dotnet restore .\synedgy.pssqlite.csproj --packages .\output\NuGetPackages
+./build.ps1 -Tasks Sync_Sqlite_Package_Assets
+```
+
 - Bootstrap dependencies with:
 
 ```powershell

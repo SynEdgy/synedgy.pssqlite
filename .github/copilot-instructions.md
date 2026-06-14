@@ -14,8 +14,9 @@
 - The source module manifest is `source\synedgy.PSSqlite.psd1`.
 - The built module is produced under `output\module`, and `build.yaml` keeps versioned output enabled.
 - Keep required modules resolving into `output\RequiredModules`.
+- SQLite package assets are restored from `synedgy.pssqlite.csproj` into a gitignored folder under `output\NuGetPackages`, then the required managed and native files are copied into `source\lib`.
 - This module must remain compatible with Windows PowerShell 5.1 and PowerShell 7.
-- `source\ScriptsToProcess\PreLoadTypes.ps1` is responsible for loading the managed and native SQLite assemblies; changes there must preserve runtime and architecture resolution.
+- `source\ScriptsToProcess\PreLoadTypes.ps1` is responsible for loading the native SQLite library and the managed SQLite assemblies before the rest of the module parses; changes there must preserve runtime and architecture resolution.
 - `source\suffix.ps1` exports PowerShell classes through module-qualified type accelerators; changes there must preserve import and cleanup behavior.
 - New or updated functions must keep comment-based help complete, including at least one `.EXAMPLE`, because `tests\QA\module.tests.ps1` enforces help coverage for exported functions.
 - Add an `Unreleased` changelog entry in `CHANGELOG.md` for behavior or workflow changes.

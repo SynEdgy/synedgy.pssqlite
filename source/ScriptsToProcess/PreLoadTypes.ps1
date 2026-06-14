@@ -15,6 +15,47 @@ if ($PSVersionTable.PSEdition -eq 'Desktop')
     $assembliesToLoad += 'SQLitePCLRaw.provider.dynamic_cdecl.dll' # Was needed for Windows PowerShell
 }
 
+function Import-NativeSqliteLibrary
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $NativeLibraryPath
+    )
+
+    if (-not (Test-Path -Path $NativeLibraryPath))
+    {
+        throw "Native SQLite library not found: $NativeLibraryPath"
+    }
+
+    if ($IsCoreCLR)
+    {
+        Write-Verbose -Message "Loading native SQLite library: $NativeLibraryPath"
+        $null = [System.Runtime.InteropServices.NativeLibrary]::Load($NativeLibraryPath)
+    }
+    else
+    {
+        if (-not ('Win32.NativeLibraryLoader' -as [type]))
+        {
+            Add-Type -Namespace Win32 -Name NativeLibraryLoader -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("kernel32", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+public static extern System.IntPtr LoadLibrary(string fileName);
+'@
+        }
+
+        Write-Verbose -Message "Loading native SQLite library: $NativeLibraryPath"
+        $handle = [Win32.NativeLibraryLoader]::LoadLibrary($NativeLibraryPath)
+
+        if ($handle -eq [System.IntPtr]::Zero)
+        {
+            $lastError = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+            throw "Failed to load native SQLite library '$NativeLibraryPath'. Win32 error: $lastError"
+        }
+    }
+}
+
 # Add Native assemblies to process $Env:PATH
 $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
 $libPath = Join-Path -Path $moduleRoot -ChildPath "lib"
@@ -40,6 +81,7 @@ else
 $os = if ($IsWindows -or $PSVersionTable.PSEdition -eq 'Desktop') { 'win' } elseif ($IsMacOS) { 'osx' } elseif ($IsLinux) { 'linux' } else { throw "Unsupported OS" }
 
 $expectedRID = '{0}-{1}' -f $os, $arch
+$nativeLibraryName = if ($os -eq 'win') { 'e_sqlite3.dll' } elseif ($os -eq 'osx') { 'libe_sqlite3.dylib' } else { 'libe_sqlite3.so' }
 # Add the native assemblies to the PATH
 $runtimesPath = Join-Path -Path $libPath -ChildPath 'runtimes'
 $osRuntimePath = Join-Path -Path $runtimesPath -ChildPath $expectedRID
@@ -60,6 +102,9 @@ else
 {
     Write-Verbose -Message "Native path already exists in environment PATH: $nativePath"
 }
+
+$nativeLibraryPath = Join-Path -Path $nativePath -ChildPath $nativeLibraryName
+Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
 
 # Load the managed assemblies in order
 # TODO: Test if that works and remove the if block
