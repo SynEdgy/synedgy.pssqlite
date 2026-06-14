@@ -137,3 +137,24 @@ jobs:
           $module = Get-Module -Name 'synedgy.PSSqlite' -ErrorAction Stop
 
           Write-Host "Imported module '$($module.Name)' version '$($module.Version)' from '$($module.Path)'."
+
+          $connection = New-PSSqliteConnection -ErrorAction Stop
+
+          try
+          {
+              $versionResult = Invoke-PSSqliteQuery -SqliteConnection $connection -CommandText 'SELECT sqlite_version() AS SqliteVersion;' -KeepAlive -ErrorAction Stop
+
+              if (-not $versionResult.SqliteVersion)
+              {
+                  throw 'SQLite smoke test did not return a version.'
+              }
+
+              Write-Host "SQLite smoke test succeeded with sqlite version '$($versionResult.SqliteVersion)'."
+          }
+          finally
+          {
+              if ($connection)
+              {
+                  $connection.Dispose()
+              }
+          }
