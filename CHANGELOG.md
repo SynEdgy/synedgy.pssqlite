@@ -16,3 +16,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated README.md.
+- Added GitHub Copilot repository instructions, validation skill, and setup workflow.
