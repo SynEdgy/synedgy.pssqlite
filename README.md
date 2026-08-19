@@ -171,6 +171,44 @@ Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig
 `Initialize-PSSqliteDatabase` creates the database, applies the schema, and maintains the
 `_metadata` table used to track the deployed schema version.
 
+For schema changes that require recreating the database, overwrite migrations preserve
+compatible data by default:
+
+```powershell
+Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig -MigrationMode OVERWRITE
+```
+
+This writes both a complete SQLite database backup and a versioned JSON dump next to the
+database, recreates the file, and restores matching tables and columns. Removed tables
+and columns are skipped, and new columns use their SQLite defaults. Use
+`-NoPreserveData` only when the existing data should be discarded. Backup filenames use
+the `.bak.db` suffix and include a readable timestamp, such as
+`database_2026-08-19_11.49.35.bak.db`.
+
+You can also run the JSON export and import steps independently:
+
+```powershell
+Export-PSSqliteData -SqliteDBConfig $dbConfig -Path '.\backup'
+Import-PSSqliteData -SqliteDBConfig $newDbConfig -Path '.\backup'
+```
+
+The export directory contains:
+
+- `_manifest.json`, the stable entry point used by `Import-PSSqliteData`
+- one timestamped JSON file per user table, such as
+  `0001-Cars_2026-08-19_11.49.35.json`
+- during an automatic overwrite migration, a complete database backup such as
+  `database_2026-08-19_11.49.35.bak.db`
+
+The JSON dump has its own `FormatVersion`, independent from the database schema
+`Version`. Import currently supports dump format version `1` only and rejects other
+versions rather than guessing whether their structure is compatible. BLOB values are
+Base64 encoded; views, SQLite internal tables, and `_metadata` are not exported.
+
+During import, destination foreign-key metadata is used to order parent tables before
+child tables. Constraints are deferred to support self-references and dependency cycles,
+then `PRAGMA foreign_key_check` must pass before the transaction is committed.
+
 Views can use either:
 
 - a structured YAML definition with `Columns`, `From`, `Joins`, `Where`, `GroupBy`, `Having`, and `OrderBy`

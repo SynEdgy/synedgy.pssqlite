@@ -12,6 +12,7 @@ Use this skill in a consuming repository when you want Copilot to:
 - create wrapper functions that pass `$PSBoundParameters` into `ClauseData` or `RowData`
 - use `Get-PSSqliteRow`, `New-PSSqliteRow`, `Set-PSSqliteRow`, and `Remove-PSSqliteRow`
 - define read models with `Schema.Views`
+- preserve and restore data when recreating a database schema
 
 ## Recommended repository layout
 
@@ -58,6 +59,8 @@ Use this skill when a PowerShell project wants:
    - `Set-PSSqliteRow`
    - `Remove-PSSqliteRow`
 5. Expose read models through `Schema.Views` and query them with `Get-PSSqliteRow`.
+6. For destructive schema replacement, use `OVERWRITE` mode and rely on its default
+   backup and compatible-data restore behavior.
 
 # Rules
 
@@ -65,8 +68,40 @@ Use this skill when a PowerShell project wants:
 - Keep write operations table-based; use views for read/query shaping.
 - Pass `$PSBoundParameters` into `ClauseData` or `RowData` in wrapper functions.
 - Prefer structured `Schema.Views` definitions first, and use raw `Sql:` only for advanced SQLite view syntax.
+- Do not pass `-NoPreserveData` unless the caller explicitly intends to discard all
+  existing data.
+- Use `Export-PSSqliteData` and `Import-PSSqliteData` for explicit backup/restore
+  workflows outside database initialization.
 - Keep examples simple and aligned with the repository's real config-backed workflow.
 ```
+
+## Schema replacement and data preservation
+
+`Initialize-PSSqliteDatabase` preserves data by default when `MigrationMode` is
+`OVERWRITE`:
+
+```powershell
+Initialize-PSSqliteDatabase -DatabaseConfig $config -MigrationMode OVERWRITE
+```
+
+Before replacing the database, the command creates:
+
+- a complete SQLite backup named like
+  `database_2026-08-19_11.49.35.bak.db`
+- a JSON manifest named `_manifest.json`
+- a timestamped JSON file for each user table
+
+After creating the new schema, it restores tables and columns whose names still match.
+Removed tables and columns are skipped, while new columns receive their configured
+SQLite default or `NULL`. Use `-NoPreserveData` only for an intentionally destructive
+overwrite.
+
+The JSON dump format is versioned independently from the configured database schema
+version. `Import-PSSqliteData` currently accepts format version `1` only. This strict
+check prevents newer or older dump structures from being interpreted incorrectly.
+Import reads foreign-key metadata from the destination database, restores parent tables
+before child tables, defers cyclic constraints, and verifies referential integrity before
+committing.
 
 ## Minimal example for the examples folder
 

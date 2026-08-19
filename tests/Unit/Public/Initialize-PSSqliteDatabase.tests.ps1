@@ -22,7 +22,10 @@ BeforeAll {
         param
         (
             [string]
-            $Version = '1.0.0'
+            $Version = '1.0.0',
+
+            [switch]
+            $IncludeModel
         )
 
         $testRoot = Join-Path -Path $TestDrive -ChildPath ([guid]::NewGuid().Guid)
@@ -30,6 +33,15 @@ BeforeAll {
         $configPath = Join-Path -Path $testRoot -ChildPath 'Pester.PSSqliteConfig.yml'
 
         $null = New-Item -Path $databasePath -ItemType Directory -Force
+
+        if ($IncludeModel)
+        {
+            $modelColumn = @"
+        Model:
+          Type: INTEGER
+          DefaultValue: 0
+"@
+        }
 
         @"
 DatabasePath: '$databasePath'
@@ -49,6 +61,7 @@ Schema:
           Type: TEXT
         Year:
           Type: INTEGER
+$modelColumn
 "@ | Set-Content -Path $configPath -NoNewline
 
         Get-PSSqliteDBConfig -Path $configPath
@@ -174,5 +187,49 @@ WHERE type = 'view'
         {
             $connection.Dispose()
         }
+    }
+
+    It 'Should preserve compatible data during an overwrite migration' {
+        $config = New-TestSqliteDbConfig -Version '1.0.0'
+        Initialize-PSSqliteDatabase -DatabaseConfig $config -ErrorAction Stop
+        $null = New-PSSqliteRow -SqliteDBConfig $config -TableName 'Cars' -RowData ([ordered]@{
+            Make = 'Toyota'
+            Colour = 'Yellow'
+            Year = 2024
+        }) -ErrorAction Stop
+
+        $newConfig = New-TestSqliteDbConfig -Version '2.0.0' -IncludeModel
+        $newConfig.DatabasePath = $config.DatabasePath
+        $newConfig.DatabaseFile = $config.DatabaseFile
+        $newConfig.ConnectionString = $config.ConnectionString
+        $backupPath = Join-Path -Path $TestDrive -ChildPath 'migration-backup'
+
+        Initialize-PSSqliteDatabase -DatabaseConfig $newConfig -MigrationMode OVERWRITE -DataBackupPath $backupPath -ErrorAction Stop
+
+        Test-Path -Path (Join-Path -Path $backupPath -ChildPath '_manifest.json') | Should -BeTrue
+        @(Get-ChildItem -Path $backupPath -Filter 'Pester_????-??-??_??.??.??.bak.db').Count | Should -Be 1
+        $rows = @(Get-PSSqliteRow -SqliteDBConfig $newConfig -TableName 'Cars' -ErrorAction Stop)
+        $rows.Count | Should -Be 1
+        $rows[0].Make | Should -Be 'Toyota'
+        $rows[0].Model | Should -Be 0
+    }
+
+    It 'Should remove existing data when NoPreserveData is specified' {
+        $config = New-TestSqliteDbConfig -Version '1.0.0'
+        Initialize-PSSqliteDatabase -DatabaseConfig $config -ErrorAction Stop
+        $null = New-PSSqliteRow -SqliteDBConfig $config -TableName 'Cars' -RowData ([ordered]@{
+            Make = 'Toyota'
+            Colour = 'Yellow'
+            Year = 2024
+        }) -ErrorAction Stop
+
+        $newConfig = New-TestSqliteDbConfig -Version '2.0.0' -IncludeModel
+        $newConfig.DatabasePath = $config.DatabasePath
+        $newConfig.DatabaseFile = $config.DatabaseFile
+        $newConfig.ConnectionString = $config.ConnectionString
+
+        Initialize-PSSqliteDatabase -DatabaseConfig $newConfig -MigrationMode OVERWRITE -NoPreserveData -ErrorAction Stop
+
+        @(Get-PSSqliteRow -SqliteDBConfig $newConfig -TableName 'Cars' -ErrorAction Stop).Count | Should -Be 0
     }
 }
