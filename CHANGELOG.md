@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Aligned all packaged SQLitePCLRaw assemblies to version 2.1.10 for Windows PowerShell and cross-platform runtime compatibility.
+- Aligned all packaged SQLitePCLRaw assemblies to version 2.1.10 and registered RID-specific native library resolution for Windows PowerShell and cross-platform compatibility.
 - Expanded README.md with the blog post reference plus config-driven usage and getting-started examples for schema, initialization, CRUD, views, and direct SQL queries.
 - Added a WikiSource page documenting a reusable PSSqlite Copilot skill for consumer projects.
 - Extended `Get-PSSqliteRow` so config-backed read operations can resolve declared views as well as tables.

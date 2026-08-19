@@ -3,8 +3,8 @@ $assembliesToLoad = @(
     # This list should be loaded in the order they are listed
     'System.Runtime.CompilerServices.Unsafe.dll' # has to be 4.0.4.1 from nuget package version 4.5.3
     'System.Memory.dll'
-    'SQLitePCLRaw.provider.e_sqlite3.dll'
     'SQLitePCLRaw.core.dll'
+    'SQLitePCLRaw.provider.e_sqlite3.dll'
     'SQLitePCLRaw.batteries_v2.dll'
     'Microsoft.Data.Sqlite.dll'
 )
@@ -33,7 +33,7 @@ function Import-NativeSqliteLibrary
     if ($IsCoreCLR)
     {
         Write-Verbose -Message "Loading native SQLite library: $NativeLibraryPath"
-        $null = [System.Runtime.InteropServices.NativeLibrary]::Load($NativeLibraryPath)
+        $handle = [System.Runtime.InteropServices.NativeLibrary]::Load($NativeLibraryPath)
     }
     else
     {
@@ -54,6 +54,8 @@ public static extern System.IntPtr LoadLibrary(string fileName);
             throw "Failed to load native SQLite library '$NativeLibraryPath'. Win32 error: $lastError"
         }
     }
+
+    return $handle
 }
 
 # Add Native assemblies to process $Env:PATH
@@ -104,7 +106,50 @@ else
 }
 
 $nativeLibraryPath = Join-Path -Path $nativePath -ChildPath $nativeLibraryName
-Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
+$nativeLibraryHandle = Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
+
+if ($IsCoreCLR -and -not ('PSSqlite.NativeLibraryResolver' -as [type]))
+{
+    Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+namespace PSSqlite
+{
+    public static class NativeLibraryResolver
+    {
+        private static readonly HashSet<Assembly> RegisteredAssemblies = new HashSet<Assembly>();
+
+        public static void Register(Assembly assembly, IntPtr nativeLibraryHandle)
+        {
+            lock (RegisteredAssemblies)
+            {
+                if (RegisteredAssemblies.Contains(assembly))
+                {
+                    return;
+                }
+
+                NativeLibrary.SetDllImportResolver(
+                    assembly,
+                    (libraryName, requestingAssembly, searchPath) =>
+                    {
+                        if (string.Equals(libraryName, "e_sqlite3", StringComparison.Ordinal))
+                        {
+                            return nativeLibraryHandle;
+                        }
+
+                        return IntPtr.Zero;
+                    });
+
+                RegisteredAssemblies.Add(assembly);
+            }
+        }
+    }
+}
+'@
+}
 
 # Load the managed assemblies in order
 # TODO: Test if that works and remove the if block
@@ -120,7 +165,10 @@ if (-not (Test-Path -Path $managedAssembliesFolder))
 $assembliesToLoad | ForEach-Object {
     $assemblyFileName = $_
     $assemblyPath = Join-Path -Path $managedAssembliesFolder -ChildPath $_
-    if ([appdomain]::CurrentDomain.GetAssemblies().Where{$_.location -match ('{0}$' -f $assemblyFileName)})
+    $loadedAssembly = [appdomain]::CurrentDomain.GetAssemblies().Where{$_.location -match ('{0}$' -f [regex]::Escape($assemblyFileName))} |
+        Select-Object -First 1
+
+    if ($loadedAssembly)
     {
         Write-Verbose -Message "Assembly already loaded: $_"
     }
@@ -129,11 +177,20 @@ $assembliesToLoad | ForEach-Object {
         if (Test-Path -Path $assemblyPath)
         {
             Write-Verbose -Message "Loading assembly: $assemblyPath"
-            $null = [System.Reflection.Assembly]::LoadFrom($assemblyPath)
+            $loadedAssembly = [System.Reflection.Assembly]::LoadFrom($assemblyPath)
         }
         else
         {
             Write-Error -Message "Assembly not found: $assemblyPath"
         }
+    }
+
+    if (
+        $IsCoreCLR -and
+        $assemblyFileName -eq 'SQLitePCLRaw.provider.e_sqlite3.dll' -and
+        $loadedAssembly
+    )
+    {
+        [PSSqlite.NativeLibraryResolver]::Register($loadedAssembly, $nativeLibraryHandle)
     }
 }
