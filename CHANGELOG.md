@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version comparing with built-in `_metadata` table and `Compare-PSSqliteDBVersion`.
 - Added changelog PR.
 - YAML-defined SQLite view support, including structured `Schema.Views` definitions and a raw `Sql` escape hatch for advanced views.
+- Timestamped JSON table-data export and schema-tolerant, foreign-key-aware import, with default data preservation and a complete database backup during overwrite migrations.
 
 ### Changed
 

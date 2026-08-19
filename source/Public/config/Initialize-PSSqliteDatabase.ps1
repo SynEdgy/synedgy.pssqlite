@@ -19,11 +19,25 @@ function Initialize-PSSqliteDatabase
         Migration mode for the database initialization. Options are INCREMENTAL, CREATE, or OVERWRITE.
         INCREMENTAL: Assume the database already exists and only apply changes if the registered version is lower than the expected version.
         CREATE: Only create a new database if it doesn't exist already.
-        OVERWRITE: Remove the db file and create a new one, (!!!) dropping all data (!!!).
+        OVERWRITE: Back up the database and its data, recreate the database file, and
+        restore compatible data into the new schema.
 
         .PARAMETER Force
-        If set, forces the initialization process, overwriting existing configurations, and replacing the database file if it exists.
-        ALL DATA WILL BE LOST.
+        Forces the initialization process to use OVERWRITE mode even when the schema
+        version is already current.
+
+        .PARAMETER NoPreserveData
+        Skips the database backup, JSON data export, and compatible-row restore during
+        an OVERWRITE migration. The existing database data will be permanently removed.
+
+        .PARAMETER DataBackupPath
+        Directory for the complete database backup and JSON data dump. When omitted,
+        a timestamped directory is created next to the database file.
+
+        .EXAMPLE
+        Initialize-PSSqliteDatabase -DatabaseConfig $config -MigrationMode OVERWRITE
+
+        Backs up the database, recreates the schema, and restores compatible data.
 
     #>
     [CmdletBinding(DefaultParameterSetName = 'byPath')]
@@ -52,7 +66,15 @@ function Initialize-PSSqliteDatabase
 
         [Parameter()]
         [switch]
-        $Force
+        $Force,
+
+        [Parameter()]
+        [switch]
+        $NoPreserveData,
+
+        [Parameter()]
+        [string]
+        $DataBackupPath
     )
 
     # Load the SQLiteDBConfig
@@ -101,7 +123,7 @@ function Initialize-PSSqliteDatabase
     {
         Write-Verbose -Message 'Existing database found. Checking for updates.'
 
-        $compareResult = Compare-PSSqliteDBVersion -ExpectedVersion $DatabaseConfig.DBVersion -DatabaseConfig $DatabaseConfig
+        $compareResult = Compare-PSSqliteDBVersion -ExpectedVersion $DatabaseConfig.Version -DatabaseConfig $DatabaseConfig
 
         if ($compareResult.direction -eq '==')
         {
@@ -171,8 +193,76 @@ function Initialize-PSSqliteDatabase
             if ($Force.IsPresent -eq $true -or $shouldUpdateDB -eq $true)
             {
                 Write-Verbose -Message 'Migration mode is set to OVERWRITE. Removing existing database and creating a new one.'
+                if (-not $NoPreserveData -and $DatabaseConfig.databaseExists())
+                {
+                    if (-not $DataBackupPath)
+                    {
+                        $backupDirectoryName = '{0}.data-{1}' -f $DatabaseConfig.DatabaseFile, (Get-Date -Format 'yyyyMMdd-HHmmss')
+                        $DataBackupPath = Join-Path -Path $DatabaseConfig.DatabasePath -ChildPath $backupDirectoryName
+                    }
+
+                    $manifestPath = Join-Path -Path $DataBackupPath -ChildPath '_manifest.json'
+                    if (Test-Path -Path $manifestPath -PathType Leaf)
+                    {
+                        throw [System.IO.IOException]::new(
+                            "A SQLite migration backup already exists at '$DataBackupPath'. Choose another DataBackupPath."
+                        )
+                    }
+
+                    if ($DatabaseConfig.ConnectionString -notmatch ':memory:')
+                    {
+                        $null = New-Item -Path $DataBackupPath -ItemType Directory -Force
+                        $databaseFileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($DatabaseConfig.DatabaseFile)
+                        $databaseBackupTimestamp = Get-Date -Format 'yyyy-MM-dd_HH.mm.ss'
+                        $databaseBackupFile = '{0}_{1}.bak.db' -f $databaseFileBaseName, $databaseBackupTimestamp
+                        $databaseBackupPath = Join-Path -Path $DataBackupPath -ChildPath $databaseBackupFile
+                        $sourceConnection = $null
+                        $backupConnection = $null
+
+                        try
+                        {
+                            $sourceConnection = New-PSSqliteConnection -ConnectionString $DatabaseConfig.ConnectionString
+                            $backupConnection = New-PSSqliteConnection -DatabasePath $DataBackupPath -DatabaseFile $databaseBackupFile
+                            $sourceConnection.Open()
+                            $backupConnection.Open()
+                            $sourceConnection.BackupDatabase($backupConnection)
+                        }
+                        finally
+                        {
+                            if ($sourceConnection)
+                            {
+                                $sourceConnection.Dispose()
+                            }
+
+                            if ($backupConnection)
+                            {
+                                $backupConnection.Dispose()
+                            }
+
+                            Close-PSSqliteConnection
+                        }
+
+                        Write-Verbose -Message ("Created complete database backup at '{0}'." -f $databaseBackupPath)
+                    }
+
+                    $null = Export-PSSqliteData -SqliteDBConfig $DatabaseConfig -Path $DataBackupPath -ErrorAction Stop
+                }
+
+                Close-PSSqliteConnection
                 $DatabaseConfig.removeDatabase()
                 $DatabaseConfig.createDatabase()
+
+                if (-not $NoPreserveData -and $DataBackupPath)
+                {
+                    $restoreResults = @(Import-PSSqliteData -SqliteDBConfig $DatabaseConfig -Path $DataBackupPath -ErrorAction Continue)
+                    $failedRows = [int](($restoreResults | Measure-Object -Property Failed -Sum).Sum)
+                    if ($failedRows -gt 0)
+                    {
+                        throw [System.InvalidOperationException]::new(
+                            "The database schema was recreated, but $failedRows row(s) could not be restored. The data dump remains at '$DataBackupPath'."
+                        )
+                    }
+                }
             }
             else # if ($Force.IsPresent -eq $false -and $shouldUpdateDB -eq $false)
             {
