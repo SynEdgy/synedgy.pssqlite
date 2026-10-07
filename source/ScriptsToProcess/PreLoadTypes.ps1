@@ -58,6 +58,31 @@ public static extern System.IntPtr LoadLibrary(string fileName);
     return $handle
 }
 
+function Get-LoadedNativeLibrary
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $LibraryName
+    )
+
+    try
+    {
+        [System.Diagnostics.Process]::GetCurrentProcess().Modules |
+            Where-Object {
+                $_.ModuleName -eq $LibraryName -or
+                [System.IO.Path]::GetFileName($_.FileName) -eq $LibraryName
+            } |
+            Select-Object -First 1
+    }
+    catch
+    {
+        Write-Verbose -Message "Unable to inspect loaded native libraries: $($_.Exception.Message)"
+    }
+}
+
 # Add Native assemblies to process $Env:PATH
 $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
 $libPath = Join-Path -Path $moduleRoot -ChildPath "lib"
@@ -106,7 +131,16 @@ else
 }
 
 $nativeLibraryPath = Join-Path -Path $nativePath -ChildPath $nativeLibraryName
-$nativeLibraryHandle = Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
+$loadedNativeLibrary = Get-LoadedNativeLibrary -LibraryName $nativeLibraryName
+$nativeLibraryHandle = if ($loadedNativeLibrary)
+{
+    Write-Verbose -Message "Native SQLite library already loaded in the current process: $($loadedNativeLibrary.FileName)"
+    [System.IntPtr]::Zero
+}
+else
+{
+    Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
+}
 
 if ($IsCoreCLR -and -not ('PSSqlite.NativeLibraryResolver' -as [type]))
 {
@@ -188,7 +222,8 @@ $assembliesToLoad | ForEach-Object {
     if (
         $IsCoreCLR -and
         $assemblyFileName -eq 'SQLitePCLRaw.provider.e_sqlite3.dll' -and
-        $loadedAssembly
+        $loadedAssembly -and
+        $nativeLibraryHandle -ne [System.IntPtr]::Zero
     )
     {
         [PSSqlite.NativeLibraryResolver]::Register($loadedAssembly, $nativeLibraryHandle)
