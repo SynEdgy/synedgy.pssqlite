@@ -20,6 +20,8 @@ Describe 'PreLoadTypes' {
             $VerbosePreference = $originalVerbosePreference
         }
 
-        $verboseOutput | Out-String | Should -Match 'Native SQLite library already loaded in the current process'
+        $verboseText = $verboseOutput | Out-String
+        $verboseText | Should -Match 'Native SQLite library already loaded in the current process'
+        $verboseText | Should -Not -Match 'Loading native SQLite library'
     }
 }

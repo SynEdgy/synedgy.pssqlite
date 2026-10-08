@@ -131,15 +131,29 @@ else
 }
 
 $nativeLibraryPath = Join-Path -Path $nativePath -ChildPath $nativeLibraryName
-$loadedNativeLibrary = Get-LoadedNativeLibrary -LibraryName $nativeLibraryName
-$nativeLibraryHandle = if ($loadedNativeLibrary)
+$nativeLibraryCacheKey = 'PSSqlite.NativeLibraryHandle:{0}' -f $nativeLibraryPath
+$cachedNativeLibraryHandle = [System.AppDomain]::CurrentDomain.GetData($nativeLibraryCacheKey)
+$loadedNativeLibrary = if ($null -eq $cachedNativeLibraryHandle)
+{
+    Get-LoadedNativeLibrary -LibraryName $nativeLibraryName
+}
+
+$nativeLibraryHandle = if ($null -ne $cachedNativeLibraryHandle)
+{
+    Write-Verbose -Message "Native SQLite library already loaded in the current process: $nativeLibraryPath"
+    [System.IntPtr] $cachedNativeLibraryHandle
+}
+elseif ($loadedNativeLibrary)
 {
     Write-Verbose -Message "Native SQLite library already loaded in the current process: $($loadedNativeLibrary.FileName)"
+    [System.AppDomain]::CurrentDomain.SetData($nativeLibraryCacheKey, [System.IntPtr]::Zero)
     [System.IntPtr]::Zero
 }
 else
 {
-    Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
+    $loadedNativeLibraryHandle = Import-NativeSqliteLibrary -NativeLibraryPath $nativeLibraryPath
+    [System.AppDomain]::CurrentDomain.SetData($nativeLibraryCacheKey, $loadedNativeLibraryHandle)
+    $loadedNativeLibraryHandle
 }
 
 if ($IsCoreCLR -and -not ('PSSqlite.NativeLibraryResolver' -as [type]))

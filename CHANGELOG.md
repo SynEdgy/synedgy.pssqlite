@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Avoided force-loading the bundled native `e_sqlite3` library when it is already loaded in the host process, preventing conflicts with hosts such as PowerShell Universal while retaining bundled-library loading when required.
+- Avoided force-loading the bundled native `e_sqlite3` library when it is already loaded in the host process, including platforms that do not expose native handles through `Process.Modules`, preventing conflicts with hosts such as PowerShell Universal while retaining bundled-library loading when required.
 - Aligned all packaged SQLitePCLRaw assemblies to version 2.1.10 and registered RID-specific native library resolution for Windows PowerShell and cross-platform compatibility.
 - Expanded README.md with the blog post reference plus config-driven usage and getting-started examples for schema, initialization, CRUD, views, and direct SQL queries.
 - Added a WikiSource page documenting a reusable PSSqlite Copilot skill for consumer projects.
