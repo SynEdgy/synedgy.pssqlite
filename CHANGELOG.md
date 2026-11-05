@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `Test-PSSqliteConfiguration` with shared, dependency-free runtime validation
+  for YAML loading on Windows PowerShell 5.1 and PowerShell 7.
 - Packaged JSON Schema for PSSqlite YAML configuration, with editor association
   guidance for `https://synedgy.com/schemas/pssqlite-config.schema.json`.
 - Ordered, named `Schema.SetupSql` statements for trusted custom schema setup,
@@ -16,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Rejected malformed configuration before type coercion or deployment-variable
+  expansion, without mutating caller-owned definitions.
 - Emitted configured composite primary keys, foreign keys and checks, with
   table-level indexes generated as separate statements.
 - Combined column constraints correctly, including `NOT NULL` with defaults,

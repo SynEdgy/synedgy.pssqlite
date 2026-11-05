@@ -37,7 +37,7 @@ class SQLiteDBConfig
         }
         else
         {
-            $configFileObject = Get-Content -Path $StringInfo | ConvertFrom-Yaml -Ordered
+            $configFileObject = Get-Content -LiteralPath $StringInfo -Raw -ErrorAction Stop | ConvertFrom-Yaml -Ordered -ErrorAction Stop
             $this.SetObjectProperties($configFileObject)
         }
     }
@@ -55,6 +55,16 @@ class SQLiteDBConfig
 
     hidden SetObjectProperties([System.Collections.IDictionary]$Definition)
     {
+        $validatedDefinition = $null
+        $issues = @(Get-PSSqliteConfigurationIssue -Definition $Definition -ValidatedDefinition ([ref]$validatedDefinition))
+        if ($issues.Count -gt 0)
+        {
+            $messages = $issues | ForEach-Object { '{0}: {1}' -f $_.Path, $_.Message }
+            throw [System.ArgumentException]::new(('Invalid PSSqlite configuration: ' + ($messages -join [Environment]::NewLine)))
+        }
+
+        $Definition = $validatedDefinition
+
         if ($Definition.Keys -contains 'DatabasePath')
         {
             $dbPath = Get-ExpandedString -String $Definition['DatabasePath']
