@@ -21,6 +21,11 @@ class SqliteTable
             $this.Schema = $Definition['Schema']
         }
 
+        if ($Definition.Keys -contains 'IfNotExists')
+        {
+            $this.ifNotExists = [bool]$Definition['IfNotExists']
+        }
+
         if ($Definition.keys -contains 'Columns')
         {
             foreach ($columnName in $Definition['Columns'].keys)
@@ -66,7 +71,7 @@ class SqliteTable
 
                     default
                     {
-                        Write-Warning -Message ('Unknown constraint type {0} for table {1}. Skipping.' -f $constraint['Type'], $this.Name)
+                        throw [System.ArgumentException]::new(('Unknown constraint type {0} for table {1}.' -f $constraint['Type'], $this.Name))
                     }
                 }
             }
@@ -74,10 +79,7 @@ class SqliteTable
 
         if ($Definition.keys -contains 'Options')
         {
-            foreach ($option in $Definition['Options'])
-            {
-                $this.Options = ($option -as [SQLiteTableOption[]])
-            }
+            $this.Options = $Definition['Options'] -as [SQLiteTableOption[]]
         }
     }
 
@@ -96,6 +98,33 @@ class SqliteTable
         foreach ($column in $this.Columns)
         {
             $column.ValidateDefinition()
+        }
+
+        $primaryKeyCount = @($this.Columns | Where-Object PrimaryKey).Count
+        foreach ($constraint in $this.Constraints)
+        {
+            if ($constraint -is [SqliteCheckTableConstraint])
+            {
+                $constraint.ValidateConstraint()
+            }
+            else
+            {
+                $constraint.ValidateDefinition()
+                foreach ($columnName in $constraint.Columns)
+                {
+                    if ($columnName -notin $this.Columns.Name)
+                    {
+                        throw [System.ArgumentException]::new("Constraint references unknown column '$columnName' in table '$($this.Name)'.")
+                    }
+                }
+            }
+
+            if ($constraint -is [SqlitePrimaryKeyTableConstraint]) { $primaryKeyCount++ }
+        }
+
+        if ($primaryKeyCount -gt 1)
+        {
+            throw [System.ArgumentException]::new("Table '$($this.Name)' has more than one primary key; use a single composite constraint.")
         }
     }
 
@@ -130,31 +159,46 @@ class SqliteTable
         # Append the columns
         $null = $sb.AppendLine(' (')
 
-        [int]$i = 0
-        for ($i; $i -lt $this.Columns.Count; $i++)
+        $definitions = [System.Collections.Generic.List[string]]::new()
+        foreach ($column in $this.Columns)
         {
-            Write-Verbose -Message ('Adding column {0} to table {1}' -f $this.Columns[$i].Name, $this.Name)
-            $null = $sb.Append(('    {0}' -f $this.Columns[$i].ToString()))
-            if ($i -lt ($this.Columns.Count - 1))
+            $definitions.Add('    ' + $column.ToString())
+        }
+
+        foreach ($constraint in $this.Constraints)
+        {
+            if ($constraint -isnot [SqliteIndexConstraint])
             {
-                # There's more columns to append, and it's not the first one
-                $null = $sb.AppendLine(',')
-            }
-            else
-            {
-                $null = $sb.AppendLine('')
+                $definitions.Add('    ' + $constraint.ToString())
             }
         }
+
+        $null = $sb.AppendLine(($definitions -join (',' + [Environment]::NewLine)))
 
         $null = $sb.Append(')')
 
         if ($this.Options.Count -gt 0)
         {
             $null = $sb.Append(' ')
-            $null = $sb.Append(($this.Options | ForEach-Object { $_.ToString() }) -join ', ')
+            $null = $sb.Append(($this.Options | ForEach-Object { if ($_ -eq [SQLiteTableOption]::WithoutRowId) { 'WITHOUT ROWID' } else { $_.ToString().ToUpperInvariant() } }) -join ', ')
         }
 
         $sb.AppendLine(';')
+        return $sb.ToString()
+    }
+
+    [string] GetIndexSDL()
+    {
+        $this.ValidateDefinition()
+        $sb = [System.Text.StringBuilder]::new()
+        foreach ($constraint in $this.Constraints)
+        {
+            if ($constraint -is [SqliteIndexConstraint])
+            {
+                $null = $sb.AppendLine($constraint.CreateString())
+            }
+        }
+
         return $sb.ToString()
     }
 }

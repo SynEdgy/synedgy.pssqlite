@@ -10,6 +10,15 @@ function Get-PSSqliteDBMetadata
 
     .EXAMPLE
         Get-SQLiteDBVersion -MetadataKey Version
+
+    .PARAMETER SqliteConnection
+        Connection to query.
+    .PARAMETER MetadataKey
+        Metadata keys to retrieve, or * for all keys.
+    .PARAMETER KeepAlive
+        Leave the connection open.
+    .PARAMETER SqliteTransaction
+        Caller-owned transaction on the supplied connection; keeps it open.
     #>
 
     [CmdletBinding()]
@@ -21,22 +30,39 @@ function Get-PSSqliteDBMetadata
 
         [Parameter()]
         [string[]]
-        $MetadataKey = @('*')
+        $MetadataKey = @('*'),
+
+        [Parameter()]
+        [switch]
+        $KeepAlive,
+
+        [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction
     )
 
     try
     {
-        $metadataPresent = Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText 'SELECT name from sqlite_schema WHERE name = @name COLLATE NOCASE' -Parameters @{name = '_metadata'}
+        $queryParameters = @{
+            SqliteConnection = $SqliteConnection
+            SqliteTransaction = $SqliteTransaction
+            KeepAlive = $true
+            ErrorAction = 'Stop'
+        }
+
+        $metadataPresent = Invoke-PSSqliteQuery @queryParameters -CommandText 'SELECT name from sqlite_schema WHERE name = @name COLLATE NOCASE' -Parameters @{name = '_metadata'}
+
         if ($metadataPresent)
         {
             if ($MetadataKey -contains '*')
             {
                 $query = 'SELECT key, value from _metadata;'
-                $metadataRows = @(Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $query -As OrderedDictionary)
+                $metadataRows = @(Invoke-PSSqliteQuery @queryParameters -CommandText $query -As OrderedDictionary)
             }
             else
             {
                 $sqlParameters = @{}
+
                 $keyPlaceholders = for ($index = 0; $index -lt $MetadataKey.Count; $index++)
                 {
                     $parameterName = 'MetadataKey{0}' -f $index
@@ -45,7 +71,7 @@ function Get-PSSqliteDBMetadata
                 }
 
                 $query = 'SELECT key, value from _metadata WHERE key IN ({0});' -f ($keyPlaceholders -join ', ')
-                $metadataRows = @(Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $query -Parameters $sqlParameters -As OrderedDictionary)
+                $metadataRows = @(Invoke-PSSqliteQuery @queryParameters -CommandText $query -Parameters $sqlParameters -As OrderedDictionary)
             }
 
             if ($metadataRows.Count -gt 0)
@@ -64,5 +90,12 @@ function Get-PSSqliteDBMetadata
     catch
     {
         Write-Error -Message "Failed to get SQLite DB metadata: $_"
+    }
+    finally
+    {
+        if (-not $KeepAlive -and -not $SqliteTransaction -and $SqliteConnection.State -eq 'Open')
+        {
+            $SqliteConnection.Close()
+        }
     }
 }

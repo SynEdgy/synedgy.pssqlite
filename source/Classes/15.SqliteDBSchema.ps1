@@ -3,6 +3,7 @@ class SqliteDBSchema
     [SqliteTable[]] $Tables = @()
     [SqliteView[]] $Views = @()
     [SqliteIndexConstraint[]] $Indexes = @()
+    [System.Collections.IDictionary[]] $SetupSql = @()
 
     SqliteDBSchema()
     {
@@ -11,6 +12,34 @@ class SqliteDBSchema
 
     SqliteDBSchema([IDictionary] $Definition)
     {
+        foreach ($key in $Definition.Keys)
+        {
+            if ($key -notin @('Tables', 'Views', 'Indexes', 'SetupSql'))
+            {
+                throw [System.ArgumentException]::new("Unknown schema configuration key '$key'.")
+            }
+        }
+
+        if ($Definition.Keys -contains 'SetupSql')
+        {
+            foreach ($statement in $Definition['SetupSql'])
+            {
+                if ($statement -isnot [System.Collections.IDictionary] -or
+                    [string]::IsNullOrWhiteSpace($statement['Name']) -or
+                    [string]::IsNullOrWhiteSpace($statement['Sql']))
+                {
+                    throw [System.ArgumentException]::new('Each SetupSql entry requires a Name and Sql string.')
+                }
+
+                foreach ($key in $statement.Keys)
+                {
+                    if ($key -notin @('Name', 'Sql')) { throw [System.ArgumentException]::new("Unknown SetupSql key '$key'.") }
+                }
+
+                $this.SetupSql += $statement
+            }
+        }
+
         if ($Definition.Keys -contains 'Tables')
         {
             foreach ($tableName in $Definition['Tables'].Keys)
@@ -46,10 +75,11 @@ class SqliteDBSchema
     {
         if (
             (-not $this.Tables -or $this.Tables.Count -eq 0) -and
-            (-not $this.Views -or $this.Views.Count -eq 0)
+            (-not $this.Views -or $this.Views.Count -eq 0) -and
+            (-not $this.SetupSql -or $this.SetupSql.Count -eq 0)
         )
         {
-            throw [System.ArgumentException]::new('At least one table or view is required in the schema.')
+            throw [System.ArgumentException]::new('At least one table, view or setup statement is required in the schema.')
         }
 
         foreach ($table in $this.Tables)
@@ -77,6 +107,17 @@ class SqliteDBSchema
             foreach ($index in $this.Indexes)
             {
                 $index.ValidateDefinition()
+            }
+        }
+
+        $setupNames = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+        foreach ($statement in $this.SetupSql)
+        {
+            if ([string]::IsNullOrWhiteSpace($statement['Name']) -or
+                [string]::IsNullOrWhiteSpace($statement['Sql']) -or
+                -not $setupNames.Add($statement['Name']))
+            {
+                throw [System.ArgumentException]::new('SetupSql entries must have SQL and unique non-empty names.')
             }
         }
     }
@@ -122,6 +163,11 @@ class SqliteDBSchema
         foreach ($index in $this.Indexes)
         {
             $sb.AppendLine($index.CreateString())
+        }
+
+        foreach ($table in $this.Tables)
+        {
+            $null = $sb.AppendLine($table.GetIndexSDL())
         }
 
         return $sb.ToString()

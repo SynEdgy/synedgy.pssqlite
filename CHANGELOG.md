@@ -5,8 +5,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Packaged JSON Schema for PSSqlite YAML configuration, with editor association
+  guidance for `https://synedgy.com/schemas/pssqlite-config.schema.json`.
+- Ordered, named `Schema.SetupSql` statements for trusted custom schema setup,
+  including FTS5 virtual tables and triggers.
+- Caller-owned connection and transaction support for non-destructive
+  initialisation, and typed transaction parameters for query, CRUD and metadata helpers.
+
 ### Fixed
 
+- Emitted configured composite primary keys, foreign keys and checks, with
+  table-level indexes generated as separate statements.
+- Combined column constraints correctly, including `NOT NULL` with defaults,
+  uniqueness, checks, collation and inline references.
+- Retained multiple table options, generated `WITHOUT ROWID` correctly, and honoured
+  configured primary key ordering and table `IfNotExists`.
+- Applied generated schema, custom setup SQL and schema version metadata atomically.
+- Bound query null parameters as SQL NULL, disposed query resources on failure,
+  and returned usable, buffered `DataReader` results.
+- Compared integer schema versions consistently across PowerShell editions.
 - Configured the release changelog pull request with an explicit Git identity and
   `CHANGELOG.md` staging path, and removed its duplicate pipeline invocation.
 - Restored stable release history from GitHub publication dates and tagged commits,

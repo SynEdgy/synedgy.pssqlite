@@ -8,6 +8,13 @@ Status: **partially implemented**. Automatic backup, JSON export/import, and
 compatible-data restoration are complete. Incremental column and constraint
 migrations described below are not yet implemented.
 
+Configured constraints now generate correctly for new tables. Generated schema,
+ordered `Schema.SetupSql` and `_metadata.version` are applied transactionally;
+caller-owned connections and transactions are supported for non-destructive
+initialisation. These changes do not implement schema diffing. Explicit setup SQL
+can perform a trusted migration, but must not contain transaction control or
+non-transactional operations.
+
 ## Implemented overwrite safety
 
 `Initialize-PSSqliteDatabase -MigrationMode OVERWRITE` now preserves data by

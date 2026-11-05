@@ -32,6 +32,11 @@ class SQLiteColumn
     SQLiteColumn([IDictionary] $Definition)
     {
         $this.Name = $Definition['Name']
+        if ($Definition.Keys -notcontains 'Type')
+        {
+            throw [System.ArgumentException]::new('Column Type is required.')
+        }
+
         $this.Type = $Definition['Type']
         # $null = [bool]::TryParse($Definition['PrimaryKey'], [ref]$this.PrimaryKey)
         # $this.PrimaryKeyOrder = $Definition['PrimaryKeyOrder']
@@ -42,11 +47,11 @@ class SQLiteColumn
             [bool]$refValue = $this.PrimaryKey
             $null = [bool]::TryParse($Definition['PrimaryKey'], [ref]$refValue)
             $this.PrimaryKey = $refValue
-            if ($this.PrimaryKeyOrder -and $this.PrimaryKeyOrder -ne [SqliteOrdering]::None)
-            {
-                # Ensure PrimaryKeyOrder is set to None if PrimaryKey is false
-                $this.PrimaryKeyOrder = 'NONE'
-            }
+        }
+
+        if ($Definition.Keys -contains 'PrimaryKeyOrder')
+        {
+            $this.PrimaryKeyOrder = $Definition['PrimaryKeyOrder']
         }
 
         if ($Definition.Keys -contains 'AutoIncrement' -and -not [string]::IsNullOrEmpty($this.AutoIncrement) -and $this.Type -eq [SqliteType]::Integer)
@@ -82,7 +87,7 @@ class SQLiteColumn
             $this.UniqueConflictClause = $Definition['UniqueConflictClause']
         }
 
-        if ($Definition.Keys -contains 'DefaultValue' -and -not [string]::IsNullOrEmpty($Definition['DefaultValue']))
+        if ($Definition.Keys -contains 'DefaultValue')
         {
             $this.DefaultValue = $Definition['DefaultValue']
         }
@@ -110,7 +115,7 @@ class SQLiteColumn
             throw [System.ArgumentException]::new('Column Name is required.')
         }
 
-        if (-not $this.Type)
+        if (-not [Enum]::IsDefined([SqliteType], $this.Type))
         {
             throw [System.ArgumentException]::new('Column Type is required.')
         }
@@ -146,11 +151,13 @@ class SQLiteColumn
                 $null = $sb.Append(' AUTOINCREMENT')
             }
         }
-        elseif (-not $this.AllowNull)
+
+        if (-not $this.AllowNull)
         {
             $null = $sb.Append(' NOT NULL')
         }
-        elseif ($this.Unique)
+
+        if ($this.Unique)
         {
             $null = $sb.Append(' UNIQUE')
             if ($this.UniqueConflictClause)
@@ -158,31 +165,37 @@ class SQLiteColumn
                 $null = $sb.Append((' ON CONFLICT {0}' -f $this.UniqueConflictClause))
             }
         }
-        elseif (-not [string]::IsNullOrEmpty($this.CheckExpression))
+
+        if (-not [string]::IsNullOrEmpty($this.CheckExpression))
         {
             $null = $sb.Append((' CHECK ({0})' -f $this.CheckExpression))
         }
-        elseif (-not [string]::IsNullOrEmpty($this.DefaultValue))
+
+        if ($null -ne $this.DefaultValue)
         {
             if ($this.DefaultValue -is [string])
             {
-                $useDefaultValue = $this.DefaultValue.Replace("'", "''") # Escape single quotes in string literals
+                # Strings remain SQL expressions for backwards compatibility.
+                $useDefaultValue = $this.DefaultValue
             }
             else
             {
-                $useDefaultValue = $this.DefaultValue
+                $useDefaultValue = [Convert]::ToString($this.DefaultValue, [Globalization.CultureInfo]::InvariantCulture)
             }
 
             $null = $sb.Append((' DEFAULT {0}' -f $useDefaultValue))
         }
-        elseif ($this.Collation)
+
+        if ($this.Collation)
         {
             $null = $sb.Append((' COLLATE {0}' -f $this.Collation))
         }
-        elseif ($this.References)
+
+        if ($this.References)
         {
-            $definition += " REFERENCES $($this.References)"
+            $null = $sb.Append(" REFERENCES $($this.References)")
         }
+
         #endregion
 
         return $sb.ToString()

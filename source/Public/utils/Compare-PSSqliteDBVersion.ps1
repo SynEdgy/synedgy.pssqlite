@@ -1,5 +1,19 @@
 function Compare-PSSqliteDBVersion
 {
+    <#
+    .SYNOPSIS
+    Compares the configured schema version with database metadata.
+    .PARAMETER DatabaseConfig
+    Database configuration.
+    .PARAMETER ExpectedVersion
+    Expected schema version; defaults to the configuration version.
+    .PARAMETER SqliteConnection
+    Optional caller-owned open connection.
+    .PARAMETER SqliteTransaction
+    Optional caller-owned transaction on that connection.
+    .EXAMPLE
+    Compare-PSSqliteDBVersion -DatabaseConfig $config
+    #>
     [CmdletBinding()]
     [OutputType([object])]
     param
@@ -11,7 +25,15 @@ function Compare-PSSqliteDBVersion
 
         [Parameter()]
         [string]
-        $ExpectedVersion = $DatabaseConfig.version
+        $ExpectedVersion = $DatabaseConfig.version,
+
+        [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteConnection]
+        $SqliteConnection,
+
+        [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction
     )
 
     $result = [ordered]@{
@@ -23,7 +45,14 @@ function Compare-PSSqliteDBVersion
         PSTypeName = 'synedgy.PSSqlite.DBVersionComparisonResult'
     }
 
-    if (-not $DatabaseConfig.databaseExists())
+    $ownsConnection = -not $SqliteConnection
+    if ($SqliteTransaction -and
+        (-not $SqliteConnection -or $SqliteTransaction.Connection -ne $SqliteConnection))
+    {
+        throw [ArgumentException]::new('SqliteTransaction must belong to the supplied SqliteConnection.')
+    }
+
+    if ($ownsConnection -and -not $DatabaseConfig.databaseExists())
     {
         Write-Verbose -Message 'Database does not exist. Returning default comparison result.'
         return [PSCustomObject]$result
@@ -31,8 +60,12 @@ function Compare-PSSqliteDBVersion
 
     try
     {
-        $sqliteConnection = New-PSSqliteConnection -ConnectionString $DatabaseConfig.ConnectionString
-        $metadata = Get-PSSqliteDBMetadata -SqliteConnection $sqliteConnection -MetadataKey 'version' -ErrorAction Stop
+        if ($ownsConnection)
+        {
+            $SqliteConnection = New-PSSqliteConnection -ConnectionString $DatabaseConfig.ConnectionString
+        }
+
+        $metadata = Get-PSSqliteDBMetadata -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -MetadataKey 'version' -KeepAlive -ErrorAction Stop
     }
     catch
     {
@@ -42,7 +75,7 @@ function Compare-PSSqliteDBVersion
     }
     finally
     {
-        if ($sqliteConnection)
+        if ($ownsConnection -and $SqliteConnection)
         {
             Write-Verbose -Message 'Closing the database connection.'
             $sqliteConnection.Close()
@@ -89,7 +122,12 @@ function Compare-PSSqliteDBVersion
             Write-Verbose -Message ('Database version does not match expected version: {0} -ne {1}' -f $version, $ExpectedVersion)
             $result['Reasons'] += ('Database version does not match expected version: {0} -ne {1}' -f $version, $ExpectedVersion)
 
-            if ($PSVersionTable.PSEdition -eq 'Core')
+            if ($version -match '^\d+$' -and $ExpectedVersion -match '^\d+$')
+            {
+                if ([long]$version -lt [long]$ExpectedVersion) { $result['direction'] = '<' }
+                else { $result['direction'] = '>' }
+            }
+            elseif ($PSVersionTable.PSEdition -eq 'Core')
             {
                 # [semver] is available in PowerShell Core, but not in Windows PowerShell
                 Write-Verbose -Message 'Comparing versions as semver (PowerShell Core).'

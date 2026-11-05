@@ -31,6 +31,9 @@ function New-PSSqliteRow
     preventing the overhead of opening and closing the connection repeatedly.
     If this parameter is not specified, the connection will be closed after the command completes.
 
+    .PARAMETER SqliteTransaction
+    Caller-owned transaction on SqliteConnection. The caller retains the open connection.
+
     .EXAMPLE
     New-PSSqliteRow -SqliteDBConfig $config -TableName 'Users' -RowData @{ Name = 'John'; Age = 30; }
 
@@ -60,6 +63,10 @@ function New-PSSqliteRow
         $SqliteConnection = (New-PSSqliteConnection -ConnectionString $SqliteDBConfig.ConnectionString),
 
         [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction,
+
+        [Parameter()]
         [switch]
         $KeepAlive
     )
@@ -83,6 +90,7 @@ function New-PSSqliteRow
     process
     {
         $sqlParameters = [ordered]@{}
+
         foreach ($columnName in $rowData.Keys.Where{$_ -in $columnNames})
         {
             # if you want to set null, use DBNULL or use another function to handle null values
@@ -104,7 +112,7 @@ function New-PSSqliteRow
         Write-Debug -Message ('Executing SQL: {0}' -f $sb.ToString())
         try
         {
-            $returnedValue = Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -KeepAlive -ErrorAction Stop
+            $returnedValue = Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -CommandText $sb.ToString() -Parameters $sqlParameters -KeepAlive -ErrorAction Stop
             Write-Verbose -Message ('Row inserted into table {0} successfully.' -f $TableName)
             $returnedValue
         }
@@ -117,7 +125,7 @@ function New-PSSqliteRow
 
     end
     {
-        if ($SqliteConnection -and $KeepAlive -eq $false)
+        if ($SqliteConnection -and -not $KeepAlive -and -not $SqliteTransaction)
         {
             try
             {

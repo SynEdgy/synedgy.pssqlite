@@ -11,6 +11,7 @@ CopyPaths:
   - en-US
   - lib
   - ScriptsToProcess
+  - schemas
 #  - DSCResources
   # - Modules
 Encoding: UTF8

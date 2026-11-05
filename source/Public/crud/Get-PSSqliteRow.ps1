@@ -59,6 +59,8 @@ function Get-PSSqliteRow
     It requires the SQLiteDBConfig object to be passed, which contains the connection string
     and schema information for the database.
     The function uses the Microsoft.Data.Sqlite library for database operations.
+  .PARAMETER SqliteTransaction
+    Caller-owned transaction on SqliteConnection. The caller retains the open connection.
   #>
     [CmdletBinding()]
     param
@@ -86,6 +88,10 @@ function Get-PSSqliteRow
         # If not provided, a new connection will be created using the connection string from the SqliteDBConfig.
         [ValidateNotNull()]
         $SqliteConnection = (New-PSSqliteConnection -ConnectionString $SqliteDBConfig.ConnectionString),
+
+        [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction,
 
         [Parameter()]
         [switch]
@@ -129,6 +135,7 @@ function Get-PSSqliteRow
     process
     {
         $sqlParameters = @{}
+
         [System.Text.StringBuilder]$sb = [System.Text.StringBuilder]::new()
         $null = $sb.AppendLine(('SELECT * FROM {0}' -f $TableName))
         $null = $sb.AppendLine(' WHERE 1=1')
@@ -197,12 +204,12 @@ function Get-PSSqliteRow
         }
 
         Write-Verbose -Message ('Executing query: {0} with parameters {1}' -f $sb.ToString(),($sqlParameters | ConvertTo-JSON -Depth 3))
-        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive -As $As
+        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive -As $As
     }
 
     end
     {
-        if (-not $KeepAlive)
+        if (-not $KeepAlive -and -not $SqliteTransaction)
         {
             try
             {
