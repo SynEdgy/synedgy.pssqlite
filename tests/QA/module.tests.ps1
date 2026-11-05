@@ -63,6 +63,39 @@ Describe 'Changelog Management' -Tag 'Changelog' {
     It 'Changelog should have an Unreleased header' -Skip:$skipTest {
             (Get-ChangelogData -Path (Join-Path -Path $ProjectPath -ChildPath 'CHANGELOG.md') -ErrorAction Stop).Unreleased | Should -Not -BeNullOrEmpty
     }
+
+    It 'Should release only new changes and preserve existing release history' {
+        $changelogPath = Join-Path $ProjectPath 'CHANGELOG.md'
+        $original = Get-ChangelogData -Path $changelogPath -ErrorAction Stop
+        $original.Released | Should -Not -BeNullOrEmpty
+        $nextVersion = '{0}.0.0' -f ([int]($original.LastVersion -split '\.')[0] + 1)
+        $testChangelog = Join-Path $TestDrive 'CHANGELOG.md'
+        Copy-Item -LiteralPath $changelogPath -Destination $testChangelog
+        Update-Changelog -Path $testChangelog -ReleaseVersion $nextVersion -LinkMode None -ErrorAction Stop
+        $updated = Get-ChangelogData -Path $testChangelog -ErrorAction Stop
+        $newRelease = $updated.Released | Where-Object Version -EQ $nextVersion
+        $expected = $original.Unreleased.RawData -replace '## \[Unreleased\]', "## [$nextVersion] - $($newRelease.Date.ToString('yyyy-MM-dd'))"
+        $newRelease.RawData.Trim() | Should -Be $expected.Trim()
+        foreach ($release in $original.Released)
+        {
+            $preserved = $updated.Released | Where-Object Version -EQ $release.Version
+            $preserved.RawData.Trim() | Should -Be $release.RawData.Trim()
+        }
+    }
+
+    It 'Should configure a single changelog PR that includes the updated file and a Git identity' {
+        $buildConfig = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath (Join-Path $ProjectPath 'build.yaml') -Raw)
+        $pipeline = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath (Join-Path $ProjectPath 'azure-pipelines.yml') -Raw)
+        $filesToAdd = @($buildConfig.GitHubConfig.GitHubFilesToAdd | ForEach-Object { Join-Path $ProjectPath $_ })
+        $filesToAdd | Should -Contain (Join-Path $ProjectPath 'CHANGELOG.md')
+        $buildConfig.GitHubConfig.GitHubConfigUserName | Should -Not -BeNullOrEmpty
+        $buildConfig.GitHubConfig.GitHubConfigUserEmail | Should -Not -BeNullOrEmpty
+        $buildConfig.GitHubConfig.UpdateChangelogOnPrerelease | Should -BeFalse
+        $deploySteps = @($pipeline.stages | Where-Object stage -EQ Deploy).jobs.steps
+        $invocations = @($buildConfig.BuildWorkflow.publish | Where-Object { $_ -eq 'Create_ChangeLog_GitHub_PR' }).Count
+        $invocations += @($deploySteps | Where-Object { $_.inputs.arguments -match 'Create_ChangeLog_GitHub_PR' }).Count
+        $invocations | Should -Be 1
+    }
 }
 
 Describe 'General module control' -Tags 'FunctionalQuality' {
