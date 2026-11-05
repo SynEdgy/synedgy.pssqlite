@@ -1,0 +1,496 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://synedgy.com/schemas/pssqlite-config.schema.json",
+  "title": "synedgy.PSSqlite YAML database configuration",
+  "description": "Configuration for synedgy.PSSqlite. Property names are case-insensitive. SQL expressions and setup statements are trusted code; this schema validates structure, not SQL or live database compatibility.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string", "description": "Optional editor schema association. Ignored by the configuration loader." },
+    "DatabasePath": { "$ref": "#/definitions/text" },
+    "DatabaseFile": { "$ref": "#/definitions/filename" },
+    "ConnectionString": { "$ref": "#/definitions/text" },
+    "Version": { "$ref": "#/definitions/version" },
+    "Schema": { "$ref": "#/definitions/schema" }
+  },
+  "patternProperties": {
+    "^[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee][Pp][Aa][Tt][Hh]$": { "$ref": "#/definitions/text" },
+    "^[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee][Ff][Ii][Ll][Ee]$": { "$ref": "#/definitions/filename" },
+    "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][Ii][Oo][Nn][Ss][Tt][Rr][Ii][Nn][Gg]$": { "$ref": "#/definitions/text" },
+    "^[Vv][Ee][Rr][Ss][Ii][Oo][Nn]$": { "$ref": "#/definitions/version" },
+    "^[Ss][Cc][Hh][Ee][Mm][Aa]$": { "$ref": "#/definitions/schema" }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    { "not": { "propertyNames": { "not": { "pattern": "^[Ss][Cc][Hh][Ee][Mm][Aa]$" } } } },
+    {
+      "anyOf": [
+        { "not": { "propertyNames": { "not": { "pattern": "^[Cc][Oo][Nn][Nn][Ee][Cc][Tt][Ii][Oo][Nn][Ss][Tt][Rr][Ii][Nn][Gg]$" } } } },
+        {
+          "allOf": [
+            { "not": { "propertyNames": { "not": { "pattern": "^[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee][Pp][Aa][Tt][Hh]$" } } } },
+            { "not": { "propertyNames": { "not": { "pattern": "^[Dd][Aa][Tt][Aa][Bb][Aa][Ss][Ee][Ff][Ii][Ll][Ee]$" } } } }
+          ]
+        }
+      ]
+    }
+  ],
+  "definitions": {
+    "text": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "filename": { "type": "string", "minLength": 1, "pattern": "^[^\\\\/]+$" },
+    "version": {
+      "description": "Schema version, independent of the module version. Increment when applying schema changes.",
+      "anyOf": [{ "$ref": "#/definitions/text" }, { "type": "integer", "minimum": 0 }]
+    },
+    "names": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/text" } },
+    "hasColumns": { "not": { "propertyNames": { "not": { "pattern": "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$" } } } },
+    "hasType": { "not": { "propertyNames": { "not": { "pattern": "^[Tt][Yy][Pp][Ee]$" } } } },
+    "hasName": { "not": { "propertyNames": { "not": { "pattern": "^[Nn][Aa][Mm][Ee]$" } } } },
+    "hasTable": { "not": { "propertyNames": { "not": { "pattern": "^[Tt][Aa][Bb][Ll][Ee]$" } } } },
+    "hasSql": { "not": { "propertyNames": { "not": { "pattern": "^[Ss][Qq][Ll]$" } } } },
+    "hasFrom": { "not": { "propertyNames": { "not": { "pattern": "^[Ff][Rr][Oo][Mm]$" } } } },
+    "schema": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "Tables": { "$ref": "#/definitions/tables" },
+        "Views": { "$ref": "#/definitions/views" },
+        "Indexes": { "$ref": "#/definitions/indexes" },
+        "SetupSql": { "$ref": "#/definitions/setupSql" }
+      },
+      "patternProperties": {
+        "^[Tt][Aa][Bb][Ll][Ee][Ss]$": { "$ref": "#/definitions/tables" },
+        "^[Vv][Ii][Ee][Ww][Ss]$": { "$ref": "#/definitions/views" },
+        "^[Ii][Nn][Dd][Ee][Xx][Ee][Ss]$": { "$ref": "#/definitions/indexes" },
+        "^[Ss][Ee][Tt][Uu][Pp][Ss][Qq][Ll]$": { "$ref": "#/definitions/setupSql" }
+      },
+      "additionalProperties": false,
+      "not": { "propertyNames": { "not": { "pattern": "^(?:[Tt][Aa][Bb][Ll][Ee][Ss]|[Vv][Ii][Ee][Ww][Ss]|[Ss][Ee][Tt][Uu][Pp][Ss][Qq][Ll])$" } } }
+    },
+    "tables": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/definitions/table" } },
+    "table": {
+      "type": "object",
+      "properties": {
+        "Columns": { "$ref": "#/definitions/columns" },
+        "Constraints": { "type": "array", "items": { "$ref": "#/definitions/constraint" } },
+        "Options": { "$ref": "#/definitions/tableOptions" },
+        "Schema": { "$ref": "#/definitions/text" },
+        "IfNotExists": { "type": "boolean", "default": true }
+      },
+      "patternProperties": {
+        "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/columns" },
+        "^[Cc][Oo][Nn][Ss][Tt][Rr][Aa][Ii][Nn][Tt][Ss]$": { "type": "array", "items": { "$ref": "#/definitions/constraint" } },
+        "^[Oo][Pp][Tt][Ii][Oo][Nn][Ss]$": { "$ref": "#/definitions/tableOptions" },
+        "^[Ss][Cc][Hh][Ee][Mm][Aa]$": { "$ref": "#/definitions/text" },
+        "^[Ii][Ff][Nn][Oo][Tt][Ee][Xx][Ii][Ss][Tt][Ss]$": { "type": "boolean" }
+      },
+      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/definitions/hasColumns" }]
+    },
+    "tableOptions": { "type": "array", "uniqueItems": true, "items": { "enum": ["Strict", "WithoutRowId"] } },
+    "columns": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/definitions/column" } },
+    "dataType": {
+      "type": "string",
+      "enum": ["INTEGER", "TEXT", "REAL", "BLOB", "Integer", "Text", "Real", "Blob", "integer", "text", "real", "blob"]
+    },
+    "conflict": { "type": "string", "enum": ["NONE", "ROLLBACK", "ABORT", "FAIL", "IGNORE", "REPLACE"] },
+    "defaultValue": {
+      "type": ["string", "number", "null"],
+      "description": "SQL expression or numeric default. For a text literal include SQL quotes, for example \"'unknown'\". NULL means no default clause."
+    },
+    "column": {
+      "type": "object",
+      "properties": {
+        "Type": { "$ref": "#/definitions/dataType" },
+        "PrimaryKey": { "type": "boolean", "default": false },
+        "PrimaryKeyOrder": { "enum": ["ASC", "DESC", "NONE"] },
+        "AutoIncrement": { "type": "boolean" },
+        "AllowNull": { "type": "boolean", "default": true },
+        "Unique": { "type": "boolean", "default": false },
+        "UniqueConflictClause": { "$ref": "#/definitions/conflict" },
+        "CheckExpression": { "$ref": "#/definitions/text" },
+        "DefaultValue": { "$ref": "#/definitions/defaultValue" },
+        "Collation": { "$ref": "#/definitions/text" },
+        "Indexed": { "type": "boolean", "description": "Legacy configuration flag. Use Schema.Indexes or a table Index constraint to generate an index." },
+        "References": { "$ref": "#/definitions/text" }
+      },
+      "patternProperties": {
+        "^[Tt][Yy][Pp][Ee]$": { "$ref": "#/definitions/dataType" },
+        "^[Pp][Rr][Ii][Mm][Aa][Rr][Yy][Kk][Ee][Yy]$": { "type": "boolean" },
+        "^[Pp][Rr][Ii][Mm][Aa][Rr][Yy][Kk][Ee][Yy][Oo][Rr][Dd][Ee][Rr]$": { "enum": ["ASC", "DESC", "NONE"] },
+        "^[Aa][Uu][Tt][Oo][Ii][Nn][Cc][Rr][Ee][Mm][Ee][Nn][Tt]$": { "type": "boolean" },
+        "^[Aa][Ll][Ll][Oo][Ww][Nn][Uu][Ll][Ll]$": { "type": "boolean" },
+        "^[Uu][Nn][Ii][Qq][Uu][Ee]$": { "type": "boolean" },
+        "^[Uu][Nn][Ii][Qq][Uu][Ee][Cc][Oo][Nn][Ff][Ll][Ii][Cc][Tt][Cc][Ll][Aa][Uu][Ss][Ee]$": { "$ref": "#/definitions/conflict" },
+        "^[Cc][Hh][Ee][Cc][Kk][Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$": { "$ref": "#/definitions/text" },
+        "^[Dd][Ee][Ff][Aa][Uu][Ll][Tt][Vv][Aa][Ll][Uu][Ee]$": { "$ref": "#/definitions/defaultValue" },
+        "^[Cc][Oo][Ll][Ll][Aa][Tt][Ii][Oo][Nn]$": { "$ref": "#/definitions/text" },
+        "^[Ii][Nn][Dd][Ee][Xx][Ee][Dd]$": { "type": "boolean" },
+        "^[Rr][Ee][Ff][Ee][Rr][Ee][Nn][Cc][Ee][Ss]$": { "$ref": "#/definitions/text" }
+      },
+      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/definitions/hasType" }]
+    },
+    "constraint": {
+      "type": "object",
+      "properties": {
+        "Type": { "enum": ["PrimaryKey", "ForeignKey", "Check", "Index", "PRIMARYKEY", "FOREIGNKEY", "CHECK", "INDEX", "primarykey", "foreignkey", "check", "index"] },
+        "Name": { "$ref": "#/definitions/text" },
+        "Columns": { "$ref": "#/definitions/names" },
+        "ForeignTable": { "$ref": "#/definitions/text" },
+        "ForeignColumns": { "$ref": "#/definitions/names" },
+        "OnUpdate": { "$ref": "#/definitions/foreignAction" },
+        "OnDelete": { "$ref": "#/definitions/foreignAction" },
+        "Match": { "$ref": "#/definitions/text" },
+        "CheckExpression": { "$ref": "#/definitions/text" },
+        "ConflictClause": { "$ref": "#/definitions/conflict" },
+        "Unique": { "type": "boolean" },
+        "IfNotExists": { "type": "boolean" },
+        "SchemaName": { "$ref": "#/definitions/text" },
+        "Where": { "$ref": "#/definitions/text" },
+        "TableName": { "$ref": "#/definitions/text" },
+        "ColumnName": { "$ref": "#/definitions/text" }
+      },
+      "patternProperties": {
+        "^[Tt][Yy][Pp][Ee]$": { "enum": ["PrimaryKey", "ForeignKey", "Check", "Index", "PRIMARYKEY", "FOREIGNKEY", "CHECK", "INDEX", "primarykey", "foreignkey", "check", "index"] },
+        "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/names" },
+        "^[Ff][Oo][Rr][Ee][Ii][Gg][Nn][Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Ff][Oo][Rr][Ee][Ii][Gg][Nn][Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/names" },
+        "^[Oo][Nn][Uu][Pp][Dd][Aa][Tt][Ee]$": { "$ref": "#/definitions/foreignAction" },
+        "^[Oo][Nn][Dd][Ee][Ll][Ee][Tt][Ee]$": { "$ref": "#/definitions/foreignAction" },
+        "^[Mm][Aa][Tt][Cc][Hh]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Hh][Ee][Cc][Kk][Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Oo][Nn][Ff][Ll][Ii][Cc][Tt][Cc][Ll][Aa][Uu][Ss][Ee]$": { "$ref": "#/definitions/conflict" },
+        "^[Uu][Nn][Ii][Qq][Uu][Ee]$": { "type": "boolean" },
+        "^[Ii][Ff][Nn][Oo][Tt][Ee][Xx][Ii][Ss][Tt][Ss]$": { "type": "boolean" },
+        "^[Ss][Cc][Hh][Ee][Mm][Aa][Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Ww][Hh][Ee][Rr][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Tt][Aa][Bb][Ll][Ee][Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Oo][Ll][Uu][Mm][Nn][Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        { "$ref": "#/definitions/hasType" },
+        {
+          "anyOf": [
+            {
+              "patternProperties": { "^[Tt][Yy][Pp][Ee]$": { "enum": ["PrimaryKey", "PRIMARYKEY", "primarykey"] } },
+              "allOf": [{ "$ref": "#/definitions/hasColumns" }]
+            },
+            {
+              "patternProperties": { "^[Tt][Yy][Pp][Ee]$": { "enum": ["ForeignKey", "FOREIGNKEY", "foreignkey"] } },
+              "allOf": [
+                { "$ref": "#/definitions/hasColumns" }, { "$ref": "#/definitions/hasName" },
+                { "not": { "propertyNames": { "not": { "pattern": "^[Ff][Oo][Rr][Ee][Ii][Gg][Nn][Tt][Aa][Bb][Ll][Ee]$" } } } },
+                { "not": { "propertyNames": { "not": { "pattern": "^[Ff][Oo][Rr][Ee][Ii][Gg][Nn][Cc][Oo][Ll][Uu][Mm][Nn][Ss]$" } } } }
+              ]
+            },
+            {
+              "patternProperties": { "^[Tt][Yy][Pp][Ee]$": { "enum": ["Check", "CHECK", "check"] } },
+              "not": { "propertyNames": { "not": { "pattern": "^[Cc][Hh][Ee][Cc][Kk][Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$" } } }
+            },
+            {
+              "patternProperties": { "^[Tt][Yy][Pp][Ee]$": { "enum": ["Index", "INDEX", "index"] } },
+              "allOf": [{ "$ref": "#/definitions/hasColumns" }, { "$ref": "#/definitions/hasName" }]
+            }
+          ]
+        }
+      ]
+    },
+    "foreignAction": { "enum": ["NO ACTION", "RESTRICT", "SET NULL", "SET DEFAULT", "CASCADE"] },
+    "indexes": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/definitions/index" } },
+    "index": {
+      "type": "object",
+      "properties": {
+        "Name": { "$ref": "#/definitions/text" },
+        "Table": { "$ref": "#/definitions/text" },
+        "Columns": { "$ref": "#/definitions/names" },
+        "Unique": { "type": "boolean", "default": false },
+        "IfNotExists": { "type": "boolean", "default": true },
+        "SchemaName": { "$ref": "#/definitions/text" },
+        "Where": { "$ref": "#/definitions/text" }
+      },
+      "patternProperties": {
+        "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/names" },
+        "^[Uu][Nn][Ii][Qq][Uu][Ee]$": { "type": "boolean" },
+        "^[Ii][Ff][Nn][Oo][Tt][Ee][Xx][Ii][Ss][Tt][Ss]$": { "type": "boolean" },
+        "^[Ss][Cc][Hh][Ee][Mm][Aa][Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Ww][Hh][Ee][Rr][Ee]$": { "$ref": "#/definitions/text" }
+      },
+      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/definitions/hasTable" }, { "$ref": "#/definitions/hasColumns" }]
+    },
+    "setupSql": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Trusted named SQL blocks, executed in list order after generated schema and inside the schema transaction. Do not use transaction-control statements.",
+      "items": {
+        "type": "object",
+        "properties": { "Name": { "$ref": "#/definitions/text" }, "Sql": { "$ref": "#/definitions/text" } },
+        "patternProperties": {
+          "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+          "^[Ss][Qq][Ll]$": { "$ref": "#/definitions/text" }
+        },
+        "additionalProperties": false,
+        "allOf": [{ "$ref": "#/definitions/hasName" }, { "$ref": "#/definitions/hasSql" }]
+      }
+    },
+    "views": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/definitions/view" } },
+    "viewColumns": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/definitions/viewColumn" } },
+    "viewColumn": {
+      "type": ["object", "null"],
+      "properties": {
+        "Table": { "$ref": "#/definitions/text" },
+        "Column": { "$ref": "#/definitions/text" },
+        "Expression": { "$ref": "#/definitions/text" },
+        "Source": { "$ref": "#/definitions/referenceObject" }
+      },
+      "patternProperties": {
+        "^[Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Oo][Ll][Uu][Mm][Nn]$": { "$ref": "#/definitions/text" },
+        "^[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$": { "$ref": "#/definitions/text" },
+        "^[Ss][Oo][Uu][Rr][Cc][Ee]$": { "$ref": "#/definitions/referenceObject" }
+      },
+      "additionalProperties": false
+    },
+    "structuredViewColumns": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "anyOf": [
+          { "not": { "propertyNames": { "not": { "pattern": "^[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$" } } } },
+          {
+            "not": { "propertyNames": { "not": { "pattern": "^[Ss][Oo][Uu][Rr][Cc][Ee]$" } } },
+            "patternProperties": {
+              "^[Ss][Oo][Uu][Rr][Cc][Ee]$": {
+                "not": { "propertyNames": { "not": { "pattern": "^(?:[Cc][Oo][Ll][Uu][Mm][Nn]|[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn])$" } } }
+              }
+            }
+          },
+          {
+            "not": { "propertyNames": { "not": { "pattern": "^[Cc][Oo][Ll][Uu][Mm][Nn]$" } } },
+            "propertyNames": { "not": { "pattern": "^[Ss][Oo][Uu][Rr][Cc][Ee]$" } }
+          }
+        ]
+      }
+    },
+    "referenceObject": {
+      "type": "object",
+      "properties": {
+        "Table": { "$ref": "#/definitions/text" },
+        "Alias": { "$ref": "#/definitions/text" },
+        "Column": { "$ref": "#/definitions/text" },
+        "Name": { "$ref": "#/definitions/text" },
+        "Expression": { "$ref": "#/definitions/text" }
+      },
+      "patternProperties": {
+        "^[Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Aa][Ll][Ii][Aa][Ss]$": { "$ref": "#/definitions/text" },
+        "^[Cc][Oo][Ll][Uu][Mm][Nn]$": { "$ref": "#/definitions/text" },
+        "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$": { "$ref": "#/definitions/text" }
+      },
+      "additionalProperties": false,
+      "not": { "propertyNames": { "not": { "pattern": "^(?:[Cc][Oo][Ll][Uu][Mm][Nn]|[Nn][Aa][Mm][Ee]|[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn])$" } } }
+    },
+    "reference": { "anyOf": [{ "$ref": "#/definitions/text" }, { "$ref": "#/definitions/referenceObject" }] },
+    "source": {
+      "anyOf": [
+        { "$ref": "#/definitions/text" },
+        {
+          "type": "object",
+          "properties": { "Table": { "$ref": "#/definitions/text" }, "Name": { "$ref": "#/definitions/text" }, "Alias": { "$ref": "#/definitions/text" } },
+          "patternProperties": {
+            "^[Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+            "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+            "^[Aa][Ll][Ii][Aa][Ss]$": { "$ref": "#/definitions/text" }
+          },
+          "additionalProperties": false,
+          "anyOf": [{ "$ref": "#/definitions/hasTable" }, { "$ref": "#/definitions/hasName" }]
+        }
+      ]
+    },
+    "operand": {
+      "anyOf": [
+        { "type": ["string", "number", "boolean", "null"] },
+        { "type": "array", "items": { "type": ["string", "number", "boolean", "null"] } },
+        { "$ref": "#/definitions/referenceObject" },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "properties": { "Value": { "type": ["string", "number", "boolean", "null"] } },
+          "patternProperties": { "^[Vv][Aa][Ll][Uu][Ee]$": { "type": ["string", "number", "boolean", "null"] } },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "conditionList": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/condition" } },
+    "condition": {
+      "anyOf": [
+        { "$ref": "#/definitions/text" },
+        {
+          "type": "object",
+          "properties": {
+            "All": { "$ref": "#/definitions/conditionList" },
+            "Any": { "$ref": "#/definitions/conditionList" },
+            "Left": { "$ref": "#/definitions/reference" },
+            "Operator": { "$ref": "#/definitions/text" },
+            "Right": { "$ref": "#/definitions/operand" }
+          },
+          "patternProperties": {
+            "^[Aa][Ll][Ll]$": { "$ref": "#/definitions/conditionList" },
+            "^[Aa][Nn][Yy]$": { "$ref": "#/definitions/conditionList" },
+            "^[Ll][Ee][Ff][Tt]$": { "$ref": "#/definitions/reference" },
+            "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr]$": { "$ref": "#/definitions/text" },
+            "^[Rr][Ii][Gg][Hh][Tt]$": { "$ref": "#/definitions/operand" }
+          },
+          "additionalProperties": false,
+          "anyOf": [
+            { "not": { "propertyNames": { "not": { "pattern": "^(?:[Aa][Ll][Ll]|[Aa][Nn][Yy])$" } } } },
+            {
+              "allOf": [
+                { "not": { "propertyNames": { "not": { "pattern": "^[Ll][Ee][Ff][Tt]$" } } } },
+                { "not": { "propertyNames": { "not": { "pattern": "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr]$" } } } },
+                {
+                  "anyOf": [
+                    { "not": { "propertyNames": { "not": { "pattern": "^[Rr][Ii][Gg][Hh][Tt]$" } } } },
+                    { "patternProperties": { "^[Oo][Pp][Ee][Rr][Aa][Tt][Oo][Rr]$": { "enum": ["IS NULL", "IS NOT NULL", "is null", "is not null"] } } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "join": {
+      "type": "object",
+      "properties": {
+        "Type": { "$ref": "#/definitions/text" }, "Table": { "$ref": "#/definitions/text" },
+        "Name": { "$ref": "#/definitions/text" }, "Alias": { "$ref": "#/definitions/text" },
+        "On": { "$ref": "#/definitions/condition" }
+      },
+      "patternProperties": {
+        "^[Tt][Yy][Pp][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+        "^[Aa][Ll][Ii][Aa][Ss]$": { "$ref": "#/definitions/text" },
+        "^[Oo][Nn]$": { "$ref": "#/definitions/condition" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        { "anyOf": [{ "$ref": "#/definitions/hasTable" }, { "$ref": "#/definitions/hasName" }] },
+        { "not": { "propertyNames": { "not": { "pattern": "^[Oo][Nn]$" } } } }
+      ]
+    },
+    "groupBy": {
+      "anyOf": [
+        { "type": "array", "items": { "$ref": "#/definitions/reference" } },
+        {
+          "type": "object",
+          "properties": { "Columns": { "type": "array", "items": { "$ref": "#/definitions/reference" } } },
+          "patternProperties": { "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "type": "array", "items": { "$ref": "#/definitions/reference" } } },
+          "additionalProperties": false,
+          "allOf": [{ "$ref": "#/definitions/hasColumns" }]
+        }
+      ]
+    },
+    "orderBy": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          { "$ref": "#/definitions/text" },
+          {
+            "type": "object",
+            "properties": {
+              "Column": { "$ref": "#/definitions/text" }, "Name": { "$ref": "#/definitions/text" },
+              "Table": { "$ref": "#/definitions/text" }, "Alias": { "$ref": "#/definitions/text" },
+              "Expression": { "$ref": "#/definitions/text" }, "Direction": { "enum": ["ASC", "DESC", "asc", "desc"] }
+            },
+            "patternProperties": {
+              "^[Cc][Oo][Ll][Uu][Mm][Nn]$": { "$ref": "#/definitions/text" },
+              "^[Nn][Aa][Mm][Ee]$": { "$ref": "#/definitions/text" },
+              "^[Tt][Aa][Bb][Ll][Ee]$": { "$ref": "#/definitions/text" },
+              "^[Aa][Ll][Ii][Aa][Ss]$": { "$ref": "#/definitions/text" },
+              "^[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn]$": { "$ref": "#/definitions/text" },
+              "^[Dd][Ii][Rr][Ee][Cc][Tt][Ii][Oo][Nn]$": { "enum": ["ASC", "DESC", "asc", "desc"] }
+            },
+            "additionalProperties": false,
+            "not": { "propertyNames": { "not": { "pattern": "^(?:[Cc][Oo][Ll][Uu][Mm][Nn]|[Nn][Aa][Mm][Ee]|[Ee][Xx][Pp][Rr][Ee][Ss][Ss][Ii][Oo][Nn])$" } } }
+          }
+        ]
+      }
+    },
+    "select": {
+      "type": "object",
+      "properties": { "Columns": { "$ref": "#/definitions/viewColumns" }, "Distinct": { "type": "boolean" } },
+      "patternProperties": {
+        "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/viewColumns" },
+        "^[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]$": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "view": {
+      "type": "object",
+      "properties": {
+        "Schema": { "$ref": "#/definitions/text" }, "IfNotExists": { "type": "boolean", "default": true },
+        "Columns": { "$ref": "#/definitions/viewColumns" }, "Select": { "$ref": "#/definitions/select" },
+        "Distinct": { "type": "boolean" }, "Sql": { "$ref": "#/definitions/text" },
+        "From": { "$ref": "#/definitions/source" }, "Joins": { "type": "array", "items": { "$ref": "#/definitions/join" } },
+        "Where": { "$ref": "#/definitions/condition" }, "Having": { "$ref": "#/definitions/condition" },
+        "GroupBy": { "$ref": "#/definitions/groupBy" }, "OrderBy": { "$ref": "#/definitions/orderBy" }
+      },
+      "patternProperties": {
+        "^[Ss][Cc][Hh][Ee][Mm][Aa]$": { "$ref": "#/definitions/text" },
+        "^[Ii][Ff][Nn][Oo][Tt][Ee][Xx][Ii][Ss][Tt][Ss]$": { "type": "boolean" },
+        "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/viewColumns" },
+        "^[Ss][Ee][Ll][Ee][Cc][Tt]$": { "$ref": "#/definitions/select" },
+        "^[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]$": { "type": "boolean" },
+        "^[Ss][Qq][Ll]$": { "$ref": "#/definitions/text" },
+        "^[Ff][Rr][Oo][Mm]$": { "$ref": "#/definitions/source" },
+        "^[Jj][Oo][Ii][Nn][Ss]$": { "type": "array", "items": { "$ref": "#/definitions/join" } },
+        "^[Ww][Hh][Ee][Rr][Ee]$": { "$ref": "#/definitions/condition" },
+        "^[Hh][Aa][Vv][Ii][Nn][Gg]$": { "$ref": "#/definitions/condition" },
+        "^[Gg][Rr][Oo][Uu][Pp][Bb][Yy]$": { "$ref": "#/definitions/groupBy" },
+        "^[Oo][Rr][Dd][Ee][Rr][Bb][Yy]$": { "$ref": "#/definitions/orderBy" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "anyOf": [
+            { "$ref": "#/definitions/hasColumns" },
+            {
+              "not": { "propertyNames": { "not": { "pattern": "^[Ss][Ee][Ll][Ee][Cc][Tt]$" } } },
+              "patternProperties": { "^[Ss][Ee][Ll][Ee][Cc][Tt]$": { "$ref": "#/definitions/hasColumns" } }
+            }
+          ]
+        },
+        { "anyOf": [{ "$ref": "#/definitions/hasSql" }, { "$ref": "#/definitions/hasFrom" }] },
+        {
+          "if": { "$ref": "#/definitions/hasSql" },
+          "then": {
+            "propertyNames": {
+              "not": { "pattern": "^(?:[Ff][Rr][Oo][Mm]|[Jj][Oo][Ii][Nn][Ss]|[Ww][Hh][Ee][Rr][Ee]|[Gg][Rr][Oo][Uu][Pp][Bb][Yy]|[Hh][Aa][Vv][Ii][Nn][Gg]|[Oo][Rr][Dd][Ee][Rr][Bb][Yy])$" }
+            },
+            "patternProperties": {
+              "^[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]$": { "const": false },
+              "^[Ss][Ee][Ll][Ee][Cc][Tt]$": {
+                "patternProperties": { "^[Dd][Ii][Ss][Tt][Ii][Nn][Cc][Tt]$": { "const": false } }
+              }
+            }
+          },
+          "else": {
+            "patternProperties": {
+              "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/structuredViewColumns" },
+              "^[Ss][Ee][Ll][Ee][Cc][Tt]$": {
+                "patternProperties": { "^[Cc][Oo][Ll][Uu][Mm][Nn][Ss]$": { "$ref": "#/definitions/structuredViewColumns" } }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

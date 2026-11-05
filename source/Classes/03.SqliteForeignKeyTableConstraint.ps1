@@ -66,6 +66,19 @@ class SqliteForeignKeyTableConstraint : SqliteConstraint
         {
             throw [System.ArgumentException]::new('At least one foreign column is required for foreign key constraint.')
         }
+
+        if ($this.Columns.Count -ne $this.ForeignColumns.Count)
+        {
+            throw [System.ArgumentException]::new('Foreign key and referenced column counts must match.')
+        }
+
+        foreach ($action in @($this.OnUpdate, $this.OnDelete))
+        {
+            if ($action -and $action -notin @('NO ACTION', 'RESTRICT', 'SET NULL', 'SET DEFAULT', 'CASCADE'))
+            {
+                throw [System.ArgumentException]::new("Invalid foreign key action '$action'.")
+            }
+        }
     }
 
     [string] ToString()
@@ -99,8 +112,6 @@ class SqliteForeignKeyTableConstraint : SqliteConstraint
         {
             $null = $sb.AppendLine((' MATCH {0}' -f $this.Match.ToUpper()))
         }
-
-        $null = $sb.AppendLine(');')
 
         return $sb.ToString()
     }

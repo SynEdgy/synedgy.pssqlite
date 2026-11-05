@@ -142,36 +142,7 @@ class SQLiteDBConfig
 
     hidden [void] updateDBSchema()
     {
-        Write-Verbose -Message ('Creating database at {0}' -f (Join-Path -Path $this.DatabasePath -ChildPath $this.DatabaseFile))
-        try
-        {
-            $dbconnection = New-PSSqliteConnection -ConnectionString $this.ConnectionString
-            $dbconnection.Open()
-            Write-Verbose -Message 'Database connection opened successfully.'
-            $dbcommand = $this.GetDatabaseSDL()
-            Invoke-PSSqliteQuery -SqliteConnection $dbconnection -Query $dbcommand -ErrorAction Stop
-            Invoke-PSSqliteQuery -SqliteConnection $dbconnection -Query 'CREATE TABLE IF NOT EXISTS _metadata (key TEXT PRIMARY KEY, value TEXT);' -ErrorAction Stop
-            Invoke-PSSqliteQuery -SqliteConnection $dbconnection -Query ('INSERT OR REPLACE INTO _metadata (key, value) VALUES (''version'', ''{0}'');' -f $this.Version) -ErrorAction Stop
-            Write-Verbose -Message ('Database schema created successfully with version {0}.' -f $this.Version)
-        }
-        catch
-        {
-            throw [System.InvalidOperationException]::new('Failed to update database: ' + $_.Exception.Message)
-        }
-        finally
-        {
-            try
-            {
-                $dbconnection.Close()
-                $dbconnection.Dispose()
-                [Microsoft.Data.Sqlite.SqliteConnection]::ClearAllPools()
-                Write-Verbose -Message 'Database connection closed.'
-            }
-            catch
-            {
-                Write-Warning -Message 'Failed to close the database connection.'
-            }
-        }
+        Invoke-PSSqliteSchemaSetup -DatabaseConfig $this -ErrorAction Stop
     }
 
     hidden [void] createDatabase()

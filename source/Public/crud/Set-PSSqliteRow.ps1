@@ -40,12 +40,16 @@ function Set-PSSqliteRow
     preventing the overhead of opening and closing the connection repeatedly.
     If this parameter is not specified, the connection will be closed after the command completes.
 
+    .PARAMETER SqliteTransaction
+    Caller-owned transaction on SqliteConnection. The caller retains the open connection.
+
     .PARAMETER OnConflict
     A parameter that specifies the behavior when a conflict occurs during the update.
     Possible values are 'UPDATE' (default) and 'UPSERT'.
 
     .EXAMPLE
     Set-PSSqliteRow -SqliteDBConfig $config -TableName 'Users' -RowData @{ Name = 'John'; Age = 30 } -ClauseData @{ Id = 1 }
+
     Updates the row in the 'Users' table where Id = 1, setting Name to 'John' and Age to 30.
 
     .NOTES
@@ -83,6 +87,10 @@ function Set-PSSqliteRow
         $SqliteConnection = (New-PSSqliteConnection -ConnectionString $SqliteDBConfig.ConnectionString),
 
         [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction,
+
+        [Parameter()]
         [switch]
         $KeepAlive,
 
@@ -106,6 +114,7 @@ function Set-PSSqliteRow
     process
     {
         $sqlParameters = [ordered]@{}
+
         foreach ($columnName in $rowData.Keys.Where{$_ -in $columnNames})
         {
             # if you want to set null, use DBNULL or use another function to handle null values
@@ -198,12 +207,12 @@ function Set-PSSqliteRow
         }
 
         Write-Verbose -Message ('Executing query: {0}' -f $sb.ToString())
-        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive
+        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -CommandText $sb.ToString() -Parameters $sqlParameters -keepAlive
     }
 
     end
     {
-        if (-not $KeepAlive)
+        if (-not $KeepAlive -and -not $SqliteTransaction)
         {
             try
             {

@@ -39,8 +39,12 @@ function Remove-PSSqliteRow
     preventing the overhead of opening and closing the connection repeatedly.
     If this parameter is not specified, the connection will be closed after the command completes.
 
+    .PARAMETER SqliteTransaction
+    Caller-owned transaction on SqliteConnection. The caller retains the open connection.
+
     .EXAMPLE
     Remove-PSSqliteRow -SqliteDBConfig $config -TableName 'Users' -ClauseData @{ Name = 'John*';}
+
     Deletes rows from the 'Users' table where the Name starts with 'John'.
 
     .NOTES
@@ -73,6 +77,10 @@ function Remove-PSSqliteRow
         $SqliteConnection = (New-PSSqliteConnection -ConnectionString $SqliteDBConfig.ConnectionString),
 
         [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction,
+
+        [Parameter()]
         [switch]
         $KeepAlive
     )
@@ -91,6 +99,7 @@ function Remove-PSSqliteRow
     process
     {
         $sqlParameters = @{}
+
         [System.Text.StringBuilder]$sb = [System.Text.StringBuilder]::new()
         $null = $sb.AppendLine(('DELETE FROM {0}' -f $TableName))
         $null = $sb.AppendLine(' WHERE 1=1')
@@ -159,12 +168,12 @@ function Remove-PSSqliteRow
         }
 
         Write-Verbose -Message ('Executing query: {0} with parameters {1}' -f $sb.ToString(),($sqlParameters | ConvertTo-JSON -Depth 3))
-        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -CommandText $sb.ToString() -Parameters $sqlParameters -As 'DataTable' -KeepAlive:$KeepAlive
+        Invoke-PSSqliteQuery -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -CommandText $sb.ToString() -Parameters $sqlParameters -As 'DataTable' -KeepAlive:$KeepAlive
     }
 
     end
     {
-        if (-not $KeepAlive)
+        if (-not $KeepAlive -and -not $SqliteTransaction)
         {
             try
             {

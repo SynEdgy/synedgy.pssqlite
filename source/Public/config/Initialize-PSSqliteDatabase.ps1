@@ -34,6 +34,14 @@ function Initialize-PSSqliteDatabase
         Directory for the complete database backup and JSON data dump. When omitted,
         a timestamped directory is created next to the database file.
 
+        .PARAMETER SqliteConnection
+        Caller-owned open connection. Only CREATE and INCREMENTAL are supported;
+        the connection is not closed. Its database takes precedence over configured paths.
+
+        .PARAMETER SqliteTransaction
+        Active caller-owned transaction on SqliteConnection. The caller must commit
+        or roll back. If omitted, initialisation creates and completes its own transaction.
+
         .EXAMPLE
         Initialize-PSSqliteDatabase -DatabaseConfig $config -MigrationMode OVERWRITE
 
@@ -74,7 +82,15 @@ function Initialize-PSSqliteDatabase
 
         [Parameter()]
         [string]
-        $DataBackupPath
+        $DataBackupPath,
+
+        [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteConnection]
+        $SqliteConnection,
+
+        [Parameter()]
+        [Microsoft.Data.Sqlite.SqliteTransaction]
+        $SqliteTransaction
     )
 
     # Load the SQLiteDBConfig
@@ -100,6 +116,34 @@ function Initialize-PSSqliteDatabase
                 throw "Invalid SQLiteDBConfig object provided."
             }
         }
+    }
+
+    if ($SqliteTransaction -and
+        (-not $SqliteConnection -or $SqliteTransaction.Connection -ne $SqliteConnection))
+    {
+        throw [ArgumentException]::new('SqliteTransaction must belong to the supplied SqliteConnection.')
+    }
+
+    if ($SqliteConnection)
+    {
+        if ($SqliteConnection.State -ne 'Open')
+        {
+            throw [ArgumentException]::new('The supplied SqliteConnection must be open.')
+        }
+
+        if ($Force -or $MigrationMode -eq 'OVERWRITE' -or $NoPreserveData -or $DataBackupPath)
+        {
+            throw [ArgumentException]::new('Overwrite and backup options are not supported with a caller-owned connection.')
+        }
+
+        $comparison = Compare-PSSqliteDBVersion -DatabaseConfig $DatabaseConfig -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -ErrorAction Stop
+        if (-not $comparison.IsDeployed -or
+            ($MigrationMode -eq 'INCREMENTAL' -and $comparison.direction -in @('<', '!=')))
+        {
+            Invoke-PSSqliteSchemaSetup -DatabaseConfig $DatabaseConfig -SqliteConnection $SqliteConnection -SqliteTransaction $SqliteTransaction -ErrorAction Stop
+        }
+
+        return
     }
 
     Write-Verbose -Message ('Loaded database configuration from {0}.' -f $Path)

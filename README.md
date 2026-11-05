@@ -25,8 +25,10 @@ This example keeps everything in memory and shows the full flow: YAML config, ta
 a view, initialization, and CRUD.
 
 ```powershell
+Import-Module synedgy.PSSqlite
+
 $yaml = @'
-ConnectionString: Data Source=:memory:
+ConnectionString: 'Data Source=:memory:;'
 Version: 1.0.0
 Schema:
   Tables:
@@ -61,12 +63,13 @@ Schema:
         Table: Cars
 '@
 
-$dbConfig = Get-PSSqliteDBConfig -Definition ($yaml | ConvertFrom-Yaml -Ordered)
+$dbConfig = [synedgy.PSSqlite.SQLiteDBConfig]::new(($yaml | ConvertFrom-Yaml -Ordered))
 $connection = New-PSSqliteConnection -ConnectionString $dbConfig.ConnectionString
 
 try
 {
-    Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig
+    $connection.Open()
+    Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig -SqliteConnection $connection
 
     New-PSSqliteRow -SqliteDBConfig $dbConfig -SqliteConnection $connection -KeepAlive -TableName 'Cars' -RowData @{
         Make = 'Toyota'
@@ -106,6 +109,41 @@ finally
 ```
 
 ## Core concepts
+
+### Editor schema validation
+
+The publishable JSON Schema is packaged at
+`source\schemas\pssqlite-config.schema.json`. Its permanent identifier is
+`https://synedgy.com/schemas/pssqlite-config.schema.json`; the hosted URL becomes
+usable once the schema has been published there.
+
+With the Red Hat YAML extension in VS Code, register the hosted URL in settings:
+
+```json
+{
+  "yaml.schemas": {
+    "https://synedgy.com/schemas/pssqlite-config.schema.json": [
+      "**/*.PSSqliteConfig.yml",
+      "**/*.PSSqliteConfig.yaml"
+    ]
+  }
+}
+```
+
+Alternatively, add a file-specific association as the first YAML comment:
+
+```yaml
+# yaml-language-server: $schema=https://synedgy.com/schemas/pssqlite-config.schema.json
+```
+
+For offline use, register the local schema file instead. The same URL can be used
+with other editors supporting JSON Schema for YAML.
+The contract supports canonical and case-insensitive property names, table
+constraints, views, indexes and `SetupSql`; canonical names provide completion hints.
+It validates configuration structure, not SQL syntax, cross-table references,
+duplicate case-insensitive keys, setup-name uniqueness or live database migrations.
+The module still performs runtime validation. Schema tests use PowerShell 7's
+`Test-Json`; the module itself continues to support Windows PowerShell 5.1.
 
 ### 1. Configuration-driven schema
 
@@ -170,6 +208,110 @@ Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig
 
 `Initialize-PSSqliteDatabase` creates the database, applies the schema, and maintains the
 `_metadata` table used to track the deployed schema version.
+
+Generated tables, views and indexes, optional `Schema.SetupSql` statements, and
+the version marker are applied in one transaction. A failure rolls back that
+schema application. Existing tables are still created with `IF NOT EXISTS`:
+this does **not** automatically add columns or change their existing constraints.
+
+### Custom SQL and transactions
+
+Use ordered, named `Schema.SetupSql` entries for SQLite features such as FTS5
+virtual tables or triggers:
+
+```yaml
+ConnectionString: 'Data Source=:memory:;'
+Version: '1.0.0'
+Schema:
+  Tables:
+    memory_revisions:
+      Columns:
+        memory_id:
+          Type: TEXT
+          AllowNull: false
+        revision:
+          Type: INTEGER
+          AllowNull: false
+          DefaultValue: 1
+      Constraints:
+        - Type: PrimaryKey
+          Name: pk_memory_revisions
+          Columns: [memory_id, revision]
+  SetupSql:
+    - Name: memory_fts
+      Sql: |
+        CREATE VIRTUAL TABLE IF NOT EXISTS memory_fts USING fts5(body);
+```
+
+Setup SQL runs after the generated schema, only when a schema version is applied.
+It runs again on overwrite/recreation, so keep creation statements idempotent
+when required. This is trusted configuration code, not SQL supplied by users or
+agents. Do not include transaction-control statements, connection PRAGMAs or
+non-transactional operations in setup SQL. Configure connection PRAGMAs before
+starting a transaction. `GetDatabaseSDL()` returns the generated declarative
+schema; the initialiser executes `SetupSql` separately, in list order.
+
+Column constraints now combine correctly: a column can have `NOT NULL`, a
+default, uniqueness, a check, collation and a reference. `DefaultValue` strings
+are SQL expressions: use `DefaultValue: "'unknown'"` for a text literal,
+`DefaultValue: CURRENT_TIMESTAMP` for an expression, or a YAML number for a
+numeric default. Table-level primary keys, foreign keys and checks are emitted
+inside `CREATE TABLE`; table-level index constraints generate separate statements.
+
+For in-memory databases, supply an **open connection** to initialisation so the
+database survives the call. `Initialize-PSSqliteDatabase`, `Invoke-PSSqliteQuery`
+and the CRUD helpers also accept a caller-owned `SqliteTransaction`:
+
+```powershell
+$connection = New-PSSqliteConnection -ConnectionString $dbConfig.ConnectionString
+$connection.Open()
+$transaction = $connection.BeginTransaction()
+
+try
+{
+    $databaseParameters = @{
+        SqliteConnection = $connection
+        SqliteTransaction = $transaction
+        ErrorAction = 'Stop'
+    }
+
+    Initialize-PSSqliteDatabase -DatabaseConfig $dbConfig @databaseParameters
+    New-PSSqliteRow -SqliteDBConfig $dbConfig @databaseParameters -TableName memory_revisions -RowData @{
+        memory_id = 'layout'
+        revision = 1
+    }
+
+    $transaction.Commit()
+}
+catch
+{
+    $transaction.Rollback()
+    throw
+}
+finally
+{
+    $transaction.Dispose()
+    $connection.Dispose()
+}
+```
+
+A supplied transaction must belong to the supplied open connection. PSSqlite
+does not commit, roll back, close or dispose either caller-owned resource. If
+initialisation receives a connection but no transaction, it creates and completes
+its own transaction while leaving that connection open. Caller-owned
+initialisation supports only `CREATE` and `INCREMENTAL`, not destructive overwrite
+or backup options. Query calls without a transaction retain their existing
+`KeepAlive` behaviour. Use `-ErrorAction Stop` to make query/CRUD failures
+terminating. Query parameters accept `$null` as SQL NULL; row helpers retain
+their existing convention of ignoring `$null` row values, so pass `[DBNull]::Value`
+when explicitly setting a row value to SQL NULL.
+
+`-As DataReader` returns a buffered `DataTableReader` that the caller must dispose,
+not a streaming SQLite reader. Native commands and readers are released before
+return; connection lifetime follows `KeepAlive` and transaction ownership as for
+the other output formats.
+
+### Data-preserving recreation
 
 For schema changes that require recreating the database, overwrite migrations preserve
 compatible data by default:

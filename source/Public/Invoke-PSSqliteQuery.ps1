@@ -19,6 +19,7 @@ function Invoke-PSSqliteQuery
 
     .PARAMETER As
     The format in which to return the results. Possible values are 'DataTable', 'DataReader', 'DataSet', 'OrderedDictionary', and 'PSCustomObject'.
+    DataReader returns a buffered reader that the caller must dispose.
 
     .PARAMETER CastAs
     An optional type to cast the results to.
@@ -28,6 +29,10 @@ function Invoke-PSSqliteQuery
 
     .PARAMETER CommandTimeout
     The timeout period for the command, in seconds.
+
+    .PARAMETER SqliteTransaction
+    Caller-owned transaction on SqliteConnection. The connection stays open, and
+    the caller is responsible for committing, rolling back and disposing it.
 
     .PARAMETER keepAlive
     A switch parameter that, if specified, will keep the database connection open after the command completes.
@@ -74,12 +79,22 @@ function Invoke-PSSqliteQuery
         $CommandTimeout = 30,
 
         [Parameter()]
+        [SqliteTransaction]
+        $SqliteTransaction,
+
+        [Parameter()]
         [switch]
         $keepAlive
     )
 
     process
     {
+        if ($SqliteTransaction -and
+            ($SqliteConnection.State -ne 'Open' -or $SqliteTransaction.Connection -ne $SqliteConnection))
+        {
+            throw [System.ArgumentException]::new('SqliteTransaction must be active on the supplied open SqliteConnection.')
+        }
+
         if ($SqliteConnection.State -ne 'Open')
         {
             try
@@ -93,12 +108,15 @@ function Invoke-PSSqliteQuery
             }
         }
 
+        $command = $null
+        $dataReader = $null
         try
         {
             # Create a command to execute the query
             $command = $SqliteConnection.CreateCommand()
             $command.CommandText = $CommandText
             $command.CommandTimeout = $CommandTimeout
+            if ($SqliteTransaction) { $command.Transaction = $SqliteTransaction }
 
             if ($PSBoundParameters.ContainsKey('Parameters') -and $Parameters.Count -gt 0)
             {
@@ -107,7 +125,8 @@ function Invoke-PSSqliteQuery
                 {
                     $parameter = $command.CreateParameter()
                     $parameter.ParameterName = $key
-                    $parameter.Value = $Parameters[$key]
+                    $parameter.Value = if ($null -eq $Parameters[$key]) { [DBNull]::Value } else { $Parameters[$key] }
+
                     $null = $command.Parameters.Add($parameter)
                 }
             }
@@ -116,17 +135,20 @@ function Invoke-PSSqliteQuery
             $dataReader = $command.ExecuteReader()
             $dataTable = [System.Data.DataTable]::new()
             $null = $dataTable.Load($dataReader)
-            $null = $dataReader.Dispose()
-            $null = $dataReader.Close()
         }
         catch
         {
             Write-Error -Message "An error occurred while executing the query: $_"
+            return
         }
         finally
         {
-            # Ensure the connection is closed
-            if ($SqliteConnection.State -eq 'Open' -and -not $keepAlive.IsPresent)
+            if ($dataReader) { $dataReader.Dispose() }
+
+            if ($command) { $command.Dispose() }
+
+            if ($SqliteConnection.State -eq 'Open' -and -not $keepAlive.IsPresent -and
+                -not $SqliteTransaction)
             {
                 Write-Debug -Message "Closing SQLite connection & clearing pool."
                 $null = $SqliteConnection.Close()
@@ -144,8 +166,8 @@ function Invoke-PSSqliteQuery
 
             'DataReader'
             {
-                # Return the data reader directly
-                $dataReader
+                # Like the other formats, results are buffered before releasing SQL resources.
+                ,$dataTable.CreateDataReader()
             }
 
             'OrderedDictionary'
@@ -218,6 +240,8 @@ function Invoke-PSSqliteQuery
 
         if (-not $PSBoundParameters.ContainsKey('CastAs'))
         {
+            if ($As -eq 'DataReader') { return ,$transformedResult }
+
             $transformedResult
         }
         elseif ($PSBoundParameters.ContainsKey('CastAs') -and $CastAs -ne $null)

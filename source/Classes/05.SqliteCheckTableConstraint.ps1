@@ -1,17 +1,19 @@
 class SqliteCheckTableConstraint : SqliteConstraint
 {
+    [string]$Name
     [string]$TableName
     [string]$ColumnName
     [string]$CheckExpression # Expression for CHECK constraints
 
 
-    SqliteCheckTableConstraint() : Base('INDEX')
+    SqliteCheckTableConstraint() : Base('Check')
     {
         # Default constructor
     }
 
-    SqliteCheckTableConstraint([System.Collections.IDictionary]$Definition) : Base('INDEX')
+    SqliteCheckTableConstraint([System.Collections.IDictionary]$Definition) : Base('Check')
     {
+        $this.Name = $Definition['Name']
         $this.TableName = $Definition['TableName']
         $this.ColumnName = $Definition['ColumnName']
         $this.CheckExpression = $Definition['CheckExpression']
@@ -21,11 +23,6 @@ class SqliteCheckTableConstraint : SqliteConstraint
 
     [void] ValidateConstraint()
     {
-        if (-not $this.TableName)
-        {
-            throw "TableName is required for CHECK constraints."
-        }
-
         if (-not $this.CheckExpression)
         {
             throw "CheckExpression is required for CHECK constraints."
@@ -35,6 +32,8 @@ class SqliteCheckTableConstraint : SqliteConstraint
     [string] ToString()
     {
         $this.ValidateConstraint() # Ensure the constraint is valid before converting to string
-        return "CONSTRAINT {0} CHECK ({1})" -f $this.Name, $this.CheckExpression
+        $prefix = if ($this.Name) { 'CONSTRAINT {0} ' -f $this.Name } else { '' }
+
+        return "{0}CHECK ({1})" -f $prefix, $this.CheckExpression
     }
 }

@@ -12,7 +12,7 @@ class SqlitePrimaryKeyTableConstraint : SqliteConstraint
         # Default constructor
     }
 
-    SqlitePrimaryKeyTableConstraint([IDictionary]$Definition)
+    SqlitePrimaryKeyTableConstraint([IDictionary]$Definition) : Base('PrimaryKey')
     {
         $this.Name = $Definition['Name']
         $this.Columns = ($Definition['Columns'] -as [string[]]).Where({ $_ -ne $null }) # Ensure Columns is an array of strings
@@ -24,9 +24,23 @@ class SqlitePrimaryKeyTableConstraint : SqliteConstraint
 
     [string]ToString()
     {
+        $this.ValidateDefinition()
         return (
-            'CONSTRAINT {0} PRIMARY KEY ({1}){2}' -f $this.Name, ($this.Columns -join ', '), $this.GetConflictClauseString()
+            '{0}PRIMARY KEY ({1}){2}' -f $(if ($this.Name) { 'CONSTRAINT {0} ' -f $this.Name }), ($this.Columns -join ', '), $this.GetConflictClauseString()
         )
+    }
+
+    [void] ValidateDefinition()
+    {
+        if (-not $this.Columns -or $this.Columns.Count -eq 0)
+        {
+            throw [ArgumentException]::new('At least one column is required for a primary key.')
+        }
+
+        if ($this.ConflictClause -notin @('NONE', 'ROLLBACK', 'ABORT', 'FAIL', 'IGNORE', 'REPLACE'))
+        {
+            throw [ArgumentException]::new('Invalid primary key conflict clause.')
+        }
     }
 
     [string]GetConflictClauseString()

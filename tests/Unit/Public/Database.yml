@@ -47,7 +47,7 @@ Schema:
           Type: ForeignKey
           columns: ['column2']
           ForeignTable: Table2
-          ForeignColumns: ['column1']
+          ForeignColumns: ['col1']
     Table2:
       constraints: []
       columns:
@@ -59,7 +59,8 @@ Schema:
         col1:
           type: TEXT
           AllowNull: false # Creates a NOT NULL constraint on this column
-          ForeignKey: 'Table1(column2)'
+          unique: true
+          References: 'Table1(column2)'
 
         col2:
           type: REAL
