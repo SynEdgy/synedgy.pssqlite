@@ -148,6 +148,12 @@ ModuleBuildTasks:
   Sampler.GitHubTasks:
     - '*.ib.tasks'
 
+GitHubConfig:
+  GitHubFilesToAdd:
+    - 'CHANGELOG.md'
+  GitHubConfigUserName: github-actions[bot]
+  GitHubConfigUserEmail: 41898282+github-actions[bot]@users.noreply.github.com
+  UpdateChangelogOnPrerelease: false
 
 # Invoke-Build Header to be used to 'decorate' the terminal output of the tasks.
 TaskHeader: |

@@ -44,6 +44,14 @@ if (Test-Path $logPath)
 
 ## Task and pipeline safety
 
+- Configure `GitHubConfig.GitHubFilesToAdd`, `GitHubConfigUserName` and
+  `GitHubConfigUserEmail` for release changelog pull requests. Keep
+  `UpdateChangelogOnPrerelease: false` so previews do not consume `Unreleased`.
+- Keep one changelog PR invocation in the `publish` workflow; do not repeat it
+  as a separate Azure pipeline step.
+- Release changelog pull requests must be reviewed and merged back to `main`
+  before the next stable release, otherwise released entries remain in `Unreleased`.
+- Retain full Git history and tags in version-calculation and deployment checkouts.
 - Keep artifact context explicit when a workflow is packaging files from `lib`, `ScriptsToProcess`, or versioned module output.
 - Reuse existing Sampler and ModuleBuilder patterns instead of re-deriving build paths or version information independently.
 - Treat changes to `build.ps1`, `build.yaml`, `.build`, `.pipelines`, `.github/workflows`, `synedgy.pssqlite.csproj`, `source\lib`, or `source\ScriptsToProcess\PreLoadTypes.ps1` as validation-impacting changes.

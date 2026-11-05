@@ -26,6 +26,10 @@ stages:
         pool:
           vmImage: 'ubuntu-latest'
         steps:
+          - checkout: self
+            fetchDepth: 0
+            fetchTags: true
+
           - pwsh: |
               dotnet tool install --global GitVersion.Tool --version 5.*
               $gitVersionObject = dotnet-gitversion | ConvertFrom-Json
@@ -292,6 +296,10 @@ stages:
         pool:
           vmImage: 'ubuntu-latest'
         steps:
+          - checkout: self
+            fetchDepth: 0
+            fetchTags: true
+
           - task: DownloadPipelineArtifact@2
             displayName: 'Download Build Artifact'
             inputs:
@@ -310,15 +318,3 @@ stages:
               GalleryApiToken: $(GalleryApiToken)
               ReleaseBranch: $(defaultBranch)
               MainGitBranch: $(defaultBranch)
-          - task: PowerShell@2
-            name: sendChangelogPR
-            displayName: 'Send Changelog PR'
-            inputs:
-              filePath: './build.ps1'
-              arguments: '-tasks Create_ChangeLog_GitHub_PR'
-              pwsh: true
-            env:
-              GitHubToken: $(GitHubToken)
-              ReleaseBranch: $(defaultBranch)
-              MainGitBranch: $(defaultBranch)
-
