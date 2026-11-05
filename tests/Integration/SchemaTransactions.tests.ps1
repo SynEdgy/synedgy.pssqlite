@@ -196,7 +196,7 @@ Describe 'Configured constraints and atomic setup' {
         { $config.GetDatabaseSDL() } | Should -Throw '*unique*'
         $definition = @{ ConnectionString = 'Data Source=:memory:;'; Schema = @{ SetupSql = @(@{ Name = 'empty' }) } }
 
-        { [synedgy.PSSqlite.SQLiteDBConfig]::new($definition) } | Should -Throw '*Name and Sql*'
+        { [synedgy.PSSqlite.SQLiteDBConfig]::new($definition) } | Should -Throw '*SetupSql*Sql*missing*'
         { [synedgy.PSSqlite.SqliteDBSchema]::new(@{ SetpuSql = @() }) } | Should -Throw '*Unknown schema*'
         $config = New-SchemaTestConfig
         $config.Schema.Tables[0].Constraints += [synedgy.PSSqlite.SqlitePrimaryKeyTableConstraint]::new(@{ Columns = @('missing') })

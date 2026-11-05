@@ -13,7 +13,9 @@ Describe 'Publishable PSSqlite configuration schema' -Skip:(-not $supportsJsonSc
 
     It 'Should validate the existing YAML example and configuration examples in the README' {
         $yaml = Get-Content -LiteralPath (Join-Path $projectPath 'tests\Unit\Public\Database.yml') -Raw
-        $json = ConvertFrom-Yaml -Yaml $yaml | ConvertTo-Json -Depth 100
+        $definition = ConvertFrom-Yaml -Yaml $yaml
+        Test-PSSqliteConfiguration -Definition $definition -ErrorAction Stop | Should -BeTrue
+        $json = $definition | ConvertTo-Json -Depth 100
         Test-Json -Json $json -SchemaFile $schemaPath -ErrorAction Stop | Should -BeTrue
         $readme = Get-Content -LiteralPath (Join-Path $projectPath 'README.md') -Raw
         $examples = @([regex]::Matches($readme, '(?ms)^\$yaml = @''\r?\n(.*?)^''@'))
@@ -26,6 +28,7 @@ Describe 'Publishable PSSqlite configuration schema' -Skip:(-not $supportsJsonSc
 
             $json = $definition | ConvertTo-Json -Depth 100
             Test-Json -Json $json -SchemaFile $schemaPath -ErrorAction Stop | Should -BeTrue
+            Test-PSSqliteConfiguration -Definition $definition -ErrorAction Stop | Should -BeTrue
         }
     }
 
@@ -96,5 +99,6 @@ Describe 'Publishable PSSqlite configuration schema' -Skip:(-not $supportsJsonSc
     ) {
         $json = $Definition | ConvertTo-Json -Depth 100
         Test-Json -Json $json -SchemaFile $schemaPath -ErrorAction SilentlyContinue | Should -BeFalse
+        @(Test-PSSqliteConfiguration -Definition $Definition -Detailed).Count | Should -BeGreaterThan 0
     }
 }

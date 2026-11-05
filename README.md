@@ -147,6 +147,30 @@ The module still performs runtime validation. Schema tests use PowerShell 7's
 
 ### 1. Configuration-driven schema
 
+Validate a complete configuration without opening a database:
+
+```powershell
+Test-PSSqliteConfiguration -Path '.\config\Example.PSSqliteConfig.yml'
+Test-PSSqliteConfiguration -Definition $definition -Detailed
+```
+
+The default output is a Boolean; invalid definitions also emit errors that
+respect `-ErrorAction Stop`. `-Detailed` returns `Path`, `Code` and `Message`
+diagnostics instead (no diagnostics means valid). File access and YAML parsing
+failures are terminating errors in either mode.
+
+The configuration loader uses the same structural and model checks before
+expanding deployment variables. Validation does not expand those variables,
+modify the supplied definition, open a database or execute SQL. It works on
+Windows PowerShell 5.1 and PowerShell 7 without extra assemblies. It checks the
+PSSqlite runtime contract, not arbitrary JSON Schema or SQL syntax. Existing
+connection-only and parameterless constructors remain available for programmatic
+use; dictionary and YAML constructors require a complete configuration.
+Unrecognised properties are ignored, allowing documentation and custom metadata
+at any configuration level. Recognised properties are still validated strictly.
+The published JSON Schema remains stricter and flags unrecognised properties in
+editors; runtime validation deliberately permits these extensions.
+
 The module expects a YAML configuration that describes:
 
 - where the database file should live
