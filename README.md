@@ -2,6 +2,22 @@
 
 A SQLite module for PowerShell built on `Microsoft.Data.Sqlite`.
 
+## Private workspace development
+
+This checkout is private development work; no public package, release or wiki
+publication is enabled. The Azure Deploy stage is disabled.
+
+Sampler `0.121.0-preview0001` is restored with PSResourceGet under
+`output\RequiredModules`. Use `.\build.ps1 -ResolveDependency -Tasks noop`,
+then `.\build.ps1 -Tasks pack,test`. `pack` creates local packages and packages
+hand-authored `source\WikiSource` pages under `output\WikiContent` and
+`output\WikiContent.zip`; it does not push wiki content.
+
+This low-level module has no sibling module dependencies (`WorkspaceModules`
+is empty). The five-repository VS Code workspace is maintained in
+`synedgy-multiagent`. Contracts and the AgentMemory provider are separate
+scaffolds, not responsibilities of this module.
+
 ## What it is for
 
 `synedgy.PSSqlite` is meant for modules and applications that want a simple embedded

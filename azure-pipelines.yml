@@ -280,16 +280,8 @@ stages:
 
   - stage: Deploy
     dependsOn: Test
-    # Only execute deploy stage if we're on master and previous stage succeeded
-    condition: |
-      and(
-        succeeded(),
-        or(
-          eq(variables['Build.SourceBranch'], 'refs/heads/main'),
-          startsWith(variables['Build.SourceBranch'], 'refs/tags/')
-        ),
-        contains(variables['System.TeamFoundationCollectionUri'], 'synedgy')
-      )
+    # Private development only; enabling releases requires a separate reviewed change.
+    condition: false
     jobs:
       - job: Deploy_Module
         displayName: 'Deploy Module'

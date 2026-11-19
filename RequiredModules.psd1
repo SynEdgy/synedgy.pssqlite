@@ -17,7 +17,10 @@
     Pester                      = 'latest'
     ModuleBuilder               = 'latest'
     ChangelogManagement         = 'latest'
-    Sampler                     = 'latest'
+    Sampler                     = @{
+        Version = '0.121.0-preview0001'
+        Parameters = @{ AllowPrerelease = $true }
+    }
     'Sampler.GitHubTasks'       = 'latest'
     MarkdownLinkCheck           = 'latest'
     'DscResource.Common'        = 'latest'

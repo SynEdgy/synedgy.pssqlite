@@ -47,8 +47,11 @@ if (Test-Path $logPath)
 - Configure `GitHubConfig.GitHubFilesToAdd`, `GitHubConfigUserName` and
   `GitHubConfigUserEmail` for release changelog pull requests. Keep
   `UpdateChangelogOnPrerelease: false` so previews do not consume `Unreleased`.
-- Keep one changelog PR invocation in the `publish` workflow; do not repeat it
-  as a separate Azure pipeline step.
+- During private development, leave the `publish` workflow absent and the Azure
+  `Deploy` stage disabled. Retain changelog settings for a separately reviewed
+  release-enablement change; do not publish packages, releases or wiki pages.
+- If releases are re-enabled, keep one changelog PR invocation in `publish`;
+  do not repeat it as a separate Azure pipeline step.
 - Release changelog pull requests must be reviewed and merged back to `main`
   before the next stable release, otherwise released entries remain in `Unreleased`.
 - Retain full Git history and tags in version-calculation and deployment checkouts.

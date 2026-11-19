@@ -83,7 +83,7 @@ Describe 'Changelog Management' -Tag 'Changelog' {
         }
     }
 
-    It 'Should configure a single changelog PR that includes the updated file and a Git identity' {
+    It 'Should retain changelog settings without enabling publication during private development' {
         $buildConfig = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath (Join-Path $ProjectPath 'build.yaml') -Raw)
         $pipeline = ConvertFrom-Yaml -Yaml (Get-Content -LiteralPath (Join-Path $ProjectPath 'azure-pipelines.yml') -Raw)
         $filesToAdd = @($buildConfig.GitHubConfig.GitHubFilesToAdd | ForEach-Object { Join-Path $ProjectPath $_ })
@@ -91,10 +91,10 @@ Describe 'Changelog Management' -Tag 'Changelog' {
         $buildConfig.GitHubConfig.GitHubConfigUserName | Should -Not -BeNullOrEmpty
         $buildConfig.GitHubConfig.GitHubConfigUserEmail | Should -Not -BeNullOrEmpty
         $buildConfig.GitHubConfig.UpdateChangelogOnPrerelease | Should -BeFalse
-        $deploySteps = @($pipeline.stages | Where-Object stage -EQ Deploy).jobs.steps
-        $invocations = @($buildConfig.BuildWorkflow.publish | Where-Object { $_ -eq 'Create_ChangeLog_GitHub_PR' }).Count
-        $invocations += @($deploySteps | Where-Object { $_.inputs.arguments -match 'Create_ChangeLog_GitHub_PR' }).Count
-        $invocations | Should -Be 1
+        $buildConfig.BuildWorkflow.Keys | Should -Not -Contain 'publish'
+        $deployStage = @($pipeline.stages | Where-Object stage -EQ Deploy)
+        $deployStage | Should -HaveCount 1
+        $deployStage[0].condition | Should -BeFalse
     }
 }
 
